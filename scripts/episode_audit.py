@@ -63,24 +63,37 @@ def as_date(value):
     return None
 
 def read_records(path, field):
-    # Only select ID, visit, chosen field and date/medication information.
+    """Read selected visits and reconcile duplicate PATNO/EVENT_ID headers.
+
+    Rows with two conflicting populated keys are excluded rather than joined.
+    """
     data=defaultdict(lambda:defaultdict(list))
     with path.open(encoding="utf-8-sig",errors="replace",newline="") as handle:
-        reader=csv.DictReader(handle)
-        header=reader.fieldnames or []
-        if ("PATNO" not in header or field not in header or len(header)!=len(set(header))):
-            raise ValueError("Missing key/value field or duplicated columns")
+        reader=csv.reader(handle)
+        header=[x.strip() for x in next(reader,[])]
+        locations=defaultdict(list)
+        for idx,name in enumerate(header):
+            locations[name].append(idx)
+        if "PATNO" not in locations or field not in locations:
+            raise ValueError("Missing patient key or measurement field")
+        def field_value(row,name):
+            items=[row[i].strip() for i in locations.get(name,[]) if i<len(row)]
+            nonblank=[item for item in items if present(item)]
+            if len(set(nonblank))>1:
+                return None
+            return nonblank[0] if nonblank else ""
         for row in reader:
-            pid=clean(row.get("PATNO"))
-            if not present(pid):
+            pid=field_value(row,"PATNO")
+            event=field_value(row,"EVENT_ID")
+            measurement=field_value(row,field)
+            if not present(pid) or event is None or measurement is None:
                 continue
-            event=clean(row.get("EVENT_ID")) if "EVENT_ID" in header else ""
             if event not in ("","CONSENT","SC","BL"):
                 continue
             data[pid][event].append({
-                "value":clean(row.get(field)),
-                "date":as_date(row.get("INFODT")),
-                "state":clean(row.get("PDSTATE"))
+                "value":measurement,
+                "date":as_date(field_value(row,"INFODT")),
+                "state":field_value(row,"PDSTATE") or ""
             })
     return data
 
