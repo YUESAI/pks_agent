@@ -76,3 +76,29 @@ Use the collected inventory to choose a **small, verified feature catalog**,
 then build a harmonized DuckDB/Parquet layer. We intentionally do **not**
 automatically union raw PPMI, BioFIND, and Fox Insight tables based only on
 column-name similarities.
+
+## Step 2 — Full clinical coverage (PPMI / BioFIND / Fox Insight)
+
+After the structural inventory, run the selected clinical CSV profiler (standard-library only):
+
+```bash
+python scripts/profile_clinical.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/clinical_profile
+```
+
+Unlike the first header/sample audit, **the default scans all rows** of 26
+selected core CSV tables and computes distinct patient and patient/visit counts
+in memory. No raw patient records or IDs are written to the report.
+
+Outputs: `report.md`, `summary.json`, `table_coverage.csv`,
+`feature_coverage.csv`, `label_distributions.csv`,
+`event_distributions.csv`, `issues.csv`. Diagnosis/event categories
+with fewer than 10 records are suppressed.
+
+If you want a fast preview before full scanning, add `--max-rows 20000`.
+Review `docs/clinical_mapping_v0.md` for verified column *existence* and
+warnings about label leakage, diagnosis definitions, and post-dose exams.
+
+Run tests with `python -m unittest discover -s tests -v`. Outputs under
+`outputs/` are ignored by Git and must never be committed.
