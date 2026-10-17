@@ -119,3 +119,34 @@ joint_combinations.csv, joint_by_raw_diagnosis.csv, duplicate_conditions.csv,
 BL_diagnosis_codes.csv, cohort_vs_diagnosis.csv, official_codebook_subset.csv,
 issues.csv. Reports contain aggregate statistics rather than patient-level values.
 See docs/episode_design_v0.md. **Do not train from the undated SC_BL_candidate view.**
+
+## Phase 5 — Local patient database (PPMI and BioFIND)
+
+Raw data and code may be in different directories. Patient-level databases stay only on the authorized cluster.
+
+Install DuckDB: `pip install duckdb`
+
+Run from the repository checkout:
+
+```bash
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/build_patient_db.py --data-root /scratch/ylong66/data/pks/data --db-path ./outputs/patient_db/pks.duckdb --engine duckdb
+python scripts/report_patient_db.py --db-path ./outputs/patient_db/pks.duckdb --engine duckdb --output-dir ./outputs/patient_db_report
+```
+
+Or use SQLite without any new dependency:
+
+```bash
+python scripts/build_patient_db.py --data-root /scratch/ylong66/data/pks/data --db-path ./outputs/patient_db/pks.sqlite --engine sqlite
+python scripts/report_patient_db.py --db-path ./outputs/patient_db/pks.sqlite --engine sqlite --output-dir ./outputs/patient_db_report
+```
+
+**Only share outputs/patient_db_report with collaborators, not the DB file.**
+
+The database contains `patients`, `restricted_labels`, `observations`, `visits`, `feature_catalog`, and `build_metadata`.
+Candidate PD/HC labels require enrollment and BL diagnosis concordance; they are not yet clinically validated.
+The on-request `scripts/patient_store.py` exposes no diagnosis labels and does not voluntarily disclose patient results.
+Patient-level scores, IDs, provenance, and unresolved repeated exams remain inside the database.
+All SC+BL combined counts remain an undated exploratory upper bound, NOT training-ready records.
+Medication state, imputation and suspected missing-value codes must be reviewed before modeling.
