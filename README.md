@@ -102,3 +102,20 @@ warnings about label leakage, diagnosis definitions, and post-dose exams.
 
 Run tests with `python -m unittest discover -s tests -v`. Outputs under
 `outputs/` are ignored by Git and must never be committed.
+
+## Step 3 — Episode feasibility audit
+
+Run from repository checkout with the raw data elsewhere:
+
+```bash
+python scripts/episode_audit.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/episode_audit \
+  --screening-window-days 180
+```
+
+Outputs: report.md, summary.json, episode_overview.csv, feature_by_view.csv,
+joint_combinations.csv, joint_by_raw_diagnosis.csv, duplicate_conditions.csv,
+BL_diagnosis_codes.csv, cohort_vs_diagnosis.csv, official_codebook_subset.csv,
+issues.csv. Reports contain aggregate statistics rather than patient-level values.
+See docs/episode_design_v0.md. **Do not train from the undated SC_BL_candidate view.**
