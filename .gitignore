@@ -12,3 +12,11 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+
+# Local patient-level research database files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
