@@ -1,0 +1,14 @@
+# Keep all data, derived reports and model weights off GitHub.
+outputs/
+data/
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.sas7bdat
+*.xpt
+*.csv.gz
+*.tsv.gz
+__pycache__/
+.pytest_cache/
+.venv/
+.env
