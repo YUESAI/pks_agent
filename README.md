@@ -365,3 +365,37 @@ python scripts/phase12_smoke_benchmark.py \
 Only upload `outputs/phase12_smoke/` reports, not the source DB,
 episode manifest, split DB or raw files. Results do not establish
 unbiased patient diagnosis or chronological evidence availability.
+
+## Phase 13 — TRAIN-only numerical evidence and adaptive test ordering
+
+This first diagnostic-policy proof of concept uses only PPMI TRAIN patients
+from the existing Phase 10 fixed split, with five-fold inner cross-validation.
+The input is the actual recorded clinical values returned by selected Phase 9
+manifest observations; unavailable tests never update a label prediction.
+The policy cannot see data before it makes a request.
+
+Baselines: clinical fixed order, smell-first fixed order, seeded random order,
+and adaptive posterior expected information gain per action cost.
+All policies use a Laplace-smoothed, prespecified-binned Naive Bayes model
+trained in each inner training fold, with a balanced label prior.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase13_numeric_policy_cv.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase13_policy_cv \
+  --folds 5 --budget 5 --seed 20261018
+```
+
+Aggregate-only reports: `policy_numeric_cv.csv`, `summary.json`.
+Share those reports, not any patient-level DB.
+
+WARNING: numeric score discretization, drug-state-blind motor value choice,
+and candidate diagnosis labels have not been clinically validated.
+No Phase 10 held-out val/test or BioFIND data are evaluated.
+Existing train/test shortcuts and missingness remain scientific caveats.
