@@ -749,3 +749,38 @@ Do not recreate an existing manifest under the same filename; the script
 refuses to overwrite it. UNSPECIFIED medication-state records are not
 verified treatment-matched measurements. Longitudinal clinical code
 definitions and informative follow-up remain unresolved.
+
+## Phase 24 — 12-month Motor regression baselines (TRAIN only)
+
+Phase23 froze 1,874 Prodromal PPMI patients before conditioning on follow-up:
+Train 1,312 (586 paired at 12±3 months), validation 281 (130 paired),
+test 281 (129 paired). Phase24 reads ONLY the 586 eligible TRAIN target
+scores and performs patient-level five-fold out-of-fold evaluation.
+
+Baselines: persistence (next NP3TOT = baseline score), training-fold mean
+delta, training-fold median delta, and ridge-regularized linear delta.
+Report MAE, RMSE, mean signed error, baseline severity stratification,
+and paired bootstrap MAE differences versus persistence. Future visit
+month is used only to establish the pre-existing 12±3-month target;
+it is NEVER a baseline model feature. Validation/test targets remain sealed.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase24_motor_baselines.py \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase24_motor_baselines \
+  --folds 5 --seed 20261018 --bootstraps 500
+```
+
+Aggregate outputs: `train_oof_motor_metrics.csv`, `paired_vs_persistence.csv`,
+`severity_stratified_train_errors.csv`, `train_cv_fold_counts.csv`,
+`summary.json`. Share only the aggregate reports. Do NOT upload any
+longitudinal manifest SQLite file, row-level scores, clinical records or
+subject-level predictions.
+
+CAUTION: UNSPECIFIED medication codes cannot prove matched examination
+conditions. Complete-case follow-up can be informatively missing.
+This is an exploratory recorded-score prediction benchmark, NOT
+clinically validated progression forecasting or a World Model yet.
