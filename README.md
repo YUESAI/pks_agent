@@ -399,3 +399,37 @@ WARNING: numeric score discretization, drug-state-blind motor value choice,
 and candidate diagnosis labels have not been clinically validated.
 No Phase 10 held-out val/test or BioFIND data are evaluated.
 Existing train/test shortcuts and missingness remain scientific caveats.
+
+## Phase 14 — Explain high numerical AUROC before improving Doctor
+
+Phase 13 reached approximately 0.98 train-OOF AUROC from retrospective
+clinical scores. Before promoting the result, examine which modalities
+carry the signal and whether motor medication state or cohort labels
+may be influencing the comparison.
+
+Use the frozen Phase10 split, without accessing PPMI validation/test
+or external BioFIND patients:
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase14_feature_attribution.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase14_feature_ablation \
+  --folds 5 --budget 5 --seed 20261018 --bootstraps 500
+```
+
+Outputs (aggregate-only): feature_ablation_cv.csv,
+adaptive_vs_clinical_paired_bootstrap.csv, numeric_value_qc.csv,
+numeric_bin_distributions.csv, selected_motor_state_by_label.csv, summary.json.
+
+Important: feature ablations use ALL existing acceptable observations
+in a subject (they are NOT cost-constrained Doctor policies). Paired
+bootstrap uses identical PPMI train-fold subjects for adaptive and
+clinical ordering. Do not view validation/test/external patients or
+conclude clinical generalization from these exploratory results.
+Never upload or commit private patient database, manifest, or split DB.
