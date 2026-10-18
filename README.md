@@ -168,3 +168,18 @@ python scripts/episode_readiness.py \
 Outputs: `report.md`, `summary.json`, `baseline_date_coverage.csv`, `date_source_status.csv`, `feature_readiness.csv`, `duplicate_resolution.csv`, `joint_readiness.csv`. Upload only this directory, not the local database.
 
 Important: dated measurements are checked relative to **baseline visit start**, not a verified clinical diagnostic decision time. `bl_dated` and `union_dated` are conservative QC subsets, not validated training splits. BioFIND does not yet have a verified BL anchor; its date-qualified coverage is intentionally zero pending review.
+
+## Phase 7 — Investigate date formats and repeated motor exams
+
+The Phase 6 baseline date audit parsed **0 / 3,048** PPMI BL start records. Before changing the database, identify the raw date encoding and repeat exam conditions with read-only aggregate reports.
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/probe_dates_motor.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/date_motor_probe
+```
+
+Outputs: `date_patterns.csv`, `date_parse_summary.csv`, `visit_start_timing.csv`, `motor_repeat_factors.csv`, `issues.csv`, `summary.json`. Date patterns are character-class masks, NOT date strings. **Review report contents before uploading.** The cluster raw data are not edited.
+
+Do not overwrite the previous patient database yet: this tool does not repair stored date values or define a diagnosis timestamp.
