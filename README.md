@@ -893,3 +893,35 @@ Only share aggregate reports: `nested_multimodal_oof.csv`,
 Age remains excluded pending provenance validation. All patient-level
 databases stay on the cluster. This is exploratory within the same
 previously inspected TRAIN population, not independent confirmation.
+
+## Phase 28 — TRAIN-only longitudinal signal and multistep feasibility
+
+Phase27 showed no stable incremental benefit from MoCA, RBD, SCOPA or UPSIT
+over a motor-only ridge model at 12±3 months. Before fitting another model,
+Phase28 inspects the existing frozen Phase23 TRAIN manifest to determine
+how much usable change and multi-step trajectory structure it contains.
+
+Reports cover: 12-month delta score distribution; baseline severity and
+follow-up observability; actual target-month gaps; overlap among 6-,12-
+and 24-month observed targets; direction of change BL→12 versus 12→24.
+Readiness and future observations are used only for aggregate auditing,
+NOT baseline Agent input. Val/test remain unopened.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase28_longitudinal_signal.py \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase28_longitudinal_signal \
+  --min-cell-count 10
+zip -r pks_phase28_report.zip outputs/phase28_longitudinal_signal
+```
+
+Only upload the `pks_phase28_report.zip` aggregate report, NEVER
+the private longitudinal SQLite manifest or individual patient rows.
+
+Unspecified medication state is not proof of controlled treatment.
+Large or reversing score changes may reflect measurement variability,
+regression to mean or true change; this audit alone cannot separate them.
+Window-matched measures are not guaranteed exact monthly sampling.
