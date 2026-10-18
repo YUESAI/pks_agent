@@ -820,3 +820,40 @@ or the private DBs.
 NOTE: questionnaire single-item numeric ranges are provisional;
 future 12-month outcomes are not queried, and **val/test remain unopened**.
 Phase25 is a feature feasibility audit, not a trained World Model.
+
+## Phase 26 — TRAIN-only multimodal prodromal Motor prediction
+
+Phase25's 586 TRAIN patients with a 12-month Motor target had baseline
+MoCA 578/586, RBD 577/586, SCOPA-AUT 577/586, UPSIT 296/586,
+and age 0/586 under the strict month rules. Age is EXCLUDED pending
+a separate source-date audit. UPSIT is evaluated as an optional
+feature with proper-fit-fold median imputation and no missingness flags.
+
+Models use identical Phase24 TRAIN patient folds: persistence, Phase24
+motor-only ridge, and fixed-penalty multivariable ridge for (1) motor+MoCA,
+(2) motor+MoCA+RBD+SCOPA, (3) motor+MoCA+RBD+SCOPA+UPSIT.
+All normalization and missing value imputation are fitted on each
+inner training fold only. No future month-gap, followup readiness
+or post-BL observation is used as a model input. All testing is
+TRAIN out-of-fold, not final validation/test.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase26_multimodal_oof.py \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --report-dir ./outputs/phase26_multimodal_oof \
+  --folds 5 --seed 20261018 --bootstraps 500
+```
+
+Share only aggregated reports `multimodal_train_oof.csv`,
+`multimodal_paired_vs_persistence.csv`,
+`paired_train_feature_coverage.csv`,
+`age_upsit_date_provenance.csv`, `train_cv_fold_counts.csv`,
+and `summary.json`.
+
+Do NOT upload SQLite/DuckDB databases. PPMI source coding, actual
+medication state and informative followup remain unvalidated.
