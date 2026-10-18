@@ -576,3 +576,44 @@ confirmation. Isotonic regression uses class-balanced rather than
 population-prevalence calibration. Neither score threshold is a
 clinically justified safety threshold. Candidate diagnosis and
 motor medication-state semantics remain unvalidated.
+
+## Phase 19 — Select a stopping threshold without using outer evaluation patients
+
+Phase 18 reports suggest ~54% mean cost savings with Motor at a calibrated
+0.90 stopping score. However, that threshold was previously inspected,
+and confidence calibration used only about 23–24 HC patients per fold.
+
+This exploratory protocol runs exclusively on the locked **PPMI TRAIN**
+population. In each outer CV iteration, partition its fitting patients into
+**proper model fit**, **disjoint isotonic calibration**, and **disjoint
+threshold selection** sets. Evaluate the chosen rule on the outer-held-out
+TRAIN fold. The selection objective is minimum mean examination cost,
+subject to a stratified paired-bootstrap upper 95% bound on balanced
+accuracy loss of at most 0.02. If no threshold qualifies, do not stop.
+
+**Safety guard:** calibrated confidence must point to the same class as
+the original model log-odds, or that point cannot trigger stopping.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase19_risk_constrained_stop.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase19_threshold_selection \
+  --folds 5 --budget 5 --seed 20261018 \
+  --max-balanced-accuracy-loss 0.02 --bootstraps 300
+```
+
+Reports: `selected_stopping_metrics.csv`,
+`selected_vs_no_stop_paired.csv`, `inner_selection_by_fold.csv`,
+`summary.json`. Share only aggregates; NEVER upload any patient-level
+DB, patient manifest, split DB, clinical score or subject-level prediction.
+
+IMPORTANT: the bootstrap bound is only an exploratory selection heuristic.
+It is NOT a guarantee of patient safety or prospective diagnostic risk.
+The same original PPMI TRAIN data were inspected in prior phases, so this
+is not fully independent external confirmation.
