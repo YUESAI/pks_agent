@@ -686,3 +686,38 @@ PD conversion labels or survival analysis. The codebook definition,
 follow-up schedule, adjudication and censoring process must be checked
 before defining a longitudinal training task. Within-calendar-month
 event order is unknowable from MM/YYYY alone.
+
+## Phase 22 — Strict baseline/follow-up motor pairs
+
+Phase21 showed promising longitudinal motor coverage, but its audit could
+count `EVENT_ID=BL` motor records with an exam month later than the BL anchor
+as if they were follow-up. Phase22 eliminates that ambiguity before any
+new longitudinal training manifest is created.
+
+Requirements: (1) Motor baseline must have `EVENT_ID=BL` and the exam
+month must exactly match `Baseline_Visit_Start` month. (2) Later motor
+records must be associated with an actual non-BL/non-SC visit and a
+strictly later exam month. (3) A patient/month/medication-state cell
+containing conflicting totals is excluded. (4) ON, OFF and UNSPECIFIED
+must never be averaged together, and UNSPECIFIED is not proof of stable
+treatment. (5) For target month 6±2, 12±3, and 24±4 choose the closest
+unique valid month; reject equally close alternatives.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase22_strict_motor_pairs.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/phase22_strict_motor_pairs \
+  --min-cell-count 10
+```
+
+Only upload the aggregate outputs: `strict_pair_window_counts.csv`,
+`motor_state_quality.csv`, `aggregate_motor_change.csv`,
+`baseline_group_counts.csv`, `quality_flags.csv`, `summary.json`.
+Raw PPMI files and local patient databases remain on the cluster.
+
+These outputs establish pair feasibility only, not treatment-controlled
+progression trajectories or a training-ready World Model. Real-world
+follow-up and medication-state confounding remain to be addressed.
