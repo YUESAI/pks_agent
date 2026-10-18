@@ -784,3 +784,39 @@ CAUTION: UNSPECIFIED medication codes cannot prove matched examination
 conditions. Complete-case follow-up can be informatively missing.
 This is an exploratory recorded-score prediction benchmark, NOT
 clinically validated progression forecasting or a World Model yet.
+
+## Phase 25 — Baseline multimodal feature preflight (train only)
+
+Phase24: among 586 eligible prodromal TRAIN pairs, persistence had MAE
+3.08362 / RMSE 4.65701; the ridge-delta baseline had MAE 3.11974 /
+RMSE 4.45060. No simple baseline improved MAE over persistence.
+
+Before fitting a multimodal longitudinal predictor, Phase25 checks
+baseline-only availability of age, MoCA, RBD item, SCOPA-AUT item
+and UPSIT, with numeric QC and repeat conflict rejection.
+Only the locked Phase23 TRAIN patient IDs are queried from Phase8's
+PPMI clinical DB. BL exams must have a month matching the BL anchor.
+UPSIT may use SC only if BL is absent AND the SC month is 1..6 months
+before BL. The observed/unobserved 12-month target flag is used only
+for **aggregate selection-bias assessment**, never as a predictor.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase25_baseline_feature_audit.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase25_baseline_features \
+  --min-cell-count 10
+```
+
+Aggregate reports: `train_feature_status_by_followup.csv`,
+`train_joint_coverage.csv`, `train_feature_value_summaries.csv`,
+`summary.json`. Upload only these files, NOT individual patient records
+or the private DBs.
+
+NOTE: questionnaire single-item numeric ranges are provisional;
+future 12-month outcomes are not queried, and **val/test remain unopened**.
+Phase25 is a feature feasibility audit, not a trained World Model.
