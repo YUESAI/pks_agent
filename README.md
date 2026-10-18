@@ -254,3 +254,43 @@ not operating-system/database security isolation; keep the private source DB pro
 Task framing: **retrospective evidence acquisition from recorded data**,
 not a prospective, time-faithful diagnostic reconstruction or a training-ready
 world model. Do not interpret unrecorded tests as negative results.
+
+## Phase 10 — Patient split and availability-shortcut audit
+
+**Prerequisite:** Phase 8 `pks_v2.duckdb` and Phase 9 `episodes_v0.sqlite` on the cluster.
+This stage checks whether the **availability of tests alone** can predict
+the PD/HC label and produces a **patient-level, local-only** split index.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase10_leakage_splits.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/leakage_report \
+  --seed 20261018
+```
+
+Outputs are **aggregate only**: `split_summary.csv`,
+`action_availability_bias.csv`, `availability_only_baseline.csv`,
+`anchor_by_label.csv`, `summary.json`. Upload those reports, **not**
+`splits_v0.sqlite`, `episodes_v0.sqlite`, or `pks_v2.duckdb`.
+
+PPMI is stratified by candidate label and availability of a baseline-month
+anchor, with patient-level train/validation/test approximately 70/15/15.
+BioFIND receives external_test only. The split is deterministic from the
+seed; different seeds produce different splits. Do not regenerate or replace
+the existing local split index when training experiments have begun.
+
+Availability-only Bernoulli Naive Bayes is fitted on PPMI train and evaluated
+on PPMI validation/test to expose shortcuts that rely on test-ordering or
+collection patterns, rather than clinical evidence. These metrics are
+diagnostics, not evidence of usable clinical diagnosis prediction.
+
+Phase 10 also makes unavailable actions return generic `not_available` from
+the Doctor-facing API, without exposing the source QC failure reason.
+That does not remove availability as a possible shortcut; robust benchmarking
+must explicitly compare the availability-only baseline.
