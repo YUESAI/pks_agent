@@ -195,8 +195,8 @@ def audit(manifest,output,minimum=10):
          for h,(start,end) in HORIZONS.items() for gap in range(start,end+1)])
     files["train_multistep_direction.csv"]=(
         ["BL_to_12_direction","12_to_24_direction","train_patients"],
-        [dict(BL_to_12_direction=first,12_to_24_direction=second,
-              train_patients=suppression(transitions[first,second],minimum))
+        [{"BL_to_12_direction":first,"12_to_24_direction":second,
+          "train_patients":suppression(transitions[first,second],minimum)}
          for first in ("increase","unchanged","decrease")
          for second in ("increase","unchanged","decrease")])
     files["train_multistep_coverage.csv"]=(
