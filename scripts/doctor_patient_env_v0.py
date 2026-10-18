@@ -53,7 +53,7 @@ class DoctorPatientEnv:
         status, visit, filename, line, concept = entry
         self.queries.append(action_key)
         if status != "ready":
-            return {"status": "not_available", "reason": status, "action": action_key}
+            return {"status": "not_available", "action": action_key}
         values = self._source.execute("""
             SELECT value_raw,exam_month,date_precision,medication_state,quality_status
             FROM observations WHERE cohort=? AND patient_id=? AND event_id=? AND concept=?
