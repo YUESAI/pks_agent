@@ -652,3 +652,37 @@ follow-up must not be classified as stable. Month-only timestamps make
 within-month order unknowable. This audit is not a survival model or a
 longitudinal training dataset. Consult official source documentation
 before defining a target, time-to-event or censoring semantics.
+
+## Phase 21 — Longitudinal target readiness and censoring preflight
+
+Phase20 found 1,874 strict prodromal baseline subjects, 1,025 with
+a dated later diagnosis visit, and 95 with a later candidate PD diagnosis code.
+Those 95 are **not** confirmed conversion events, and missing follow-up
+must not be treated as stable.
+
+Phase21 distinguishes at 12, 24, 36 months: later PD code observed by
+horizon, follow-up documented through horizon without an earlier PD code,
+and insufficient follow-up. It also checks whether same-medication-state
+motor scores are observable at baseline and later months without averaging
+ON and OFF exams or conflicting within-month scores.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase21_longitudinal_target_readiness.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/phase21_target_readiness \
+  --min-cell-count 10
+```
+
+Aggregate-only reports: `candidate_conversion_support.csv`,
+`diagnosis_observability_horizons.csv`, `longitudinal_motor_by_state.csv`,
+`baseline_group_counts.csv`, `quality_flags.csv`, `summary.json`.
+Upload only that directory, NEVER any raw source or patient-level database.
+
+These are feasibility/observability categories, **not** validated
+PD conversion labels or survival analysis. The codebook definition,
+follow-up schedule, adjudication and censoring process must be checked
+before defining a longitudinal training task. Within-calendar-month
+event order is unknowable from MM/YYYY alone.
