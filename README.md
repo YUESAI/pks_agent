@@ -183,3 +183,36 @@ python scripts/probe_dates_motor.py \
 Outputs: `date_patterns.csv`, `date_parse_summary.csv`, `visit_start_timing.csv`, `motor_repeat_factors.csv`, `issues.csv`, `summary.json`. Date patterns are character-class masks, NOT date strings. **Review report contents before uploading.** The cluster raw data are not edited.
 
 Do not overwrite the previous patient database yet: this tool does not repair stored date values or define a diagnosis timestamp.
+## Phase 8 — Restore month-precision clinical dates in a NEW DB
+
+Phase 7 established a uniform `99/9999` date shape in clinical INFODT/EXAMDT.
+Treat this as provisional MM/YYYY, preserve month precision and never invent the day.
+PPMI motor exam uses EXAMDT when nonempty, otherwise INFODT. No clinical ordering
+within the same month can be established by these fields.
+
+Run from your repository checkout with a NEW database path (do not overwrite pks.duckdb):
+
+```bash
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/build_patient_db.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --db-path ./outputs/patient_db/pks_v2.duckdb \
+  --engine duckdb
+python scripts/month_precision_audit.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --db-path ./outputs/patient_db/pks_v2.duckdb \
+  --engine duckdb \
+  --output-dir ./outputs/month_audit
+```
+
+SQLite fallback: replace the DB path with `pks_v2.sqlite` and set `--engine sqlite`
+on both commands. Share ONLY the aggregate `outputs/month_audit/` reports.
+
+New observation columns: `exam_month` (YYYY-MM), `date_precision`
+(`month_candidate`, `day`, `missing`, or `unknown`) and `date_source`.
+`exam_date` remains NULL for month-only observations.
+
+NOTE: This is a review-only database. The baseline anchor is the visit-start
+month, NOT a verified diagnosis decision; exam and anchor in the same month
+remain temporally unordered. Do not merge SC+BL episodes for training yet.
