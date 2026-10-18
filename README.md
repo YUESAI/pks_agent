@@ -150,3 +150,21 @@ The on-request `scripts/patient_store.py` exposes no diagnosis labels and does n
 Patient-level scores, IDs, provenance, and unresolved repeated exams remain inside the database.
 All SC+BL combined counts remain an undated exploratory upper bound, NOT training-ready records.
 Medication state, imputation and suspected missing-value codes must be reviewed before modeling.
+
+## Phase 6 — Baseline date and episode readiness audit
+
+This reads the **existing local database** and the PPMI `Baseline_Visit_Start` CSV; it does not rewrite the database. Reports are aggregate only.
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/episode_readiness.py \
+  --db-path ./outputs/patient_db/pks.duckdb \
+  --engine duckdb \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/episode_readiness \
+  --screening-window-days 180
+```
+
+Outputs: `report.md`, `summary.json`, `baseline_date_coverage.csv`, `date_source_status.csv`, `feature_readiness.csv`, `duplicate_resolution.csv`, `joint_readiness.csv`. Upload only this directory, not the local database.
+
+Important: dated measurements are checked relative to **baseline visit start**, not a verified clinical diagnostic decision time. `bl_dated` and `union_dated` are conservative QC subsets, not validated training splits. BioFIND does not yet have a verified BL anchor; its date-qualified coverage is intentionally zero pending review.
