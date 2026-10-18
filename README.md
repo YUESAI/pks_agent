@@ -857,3 +857,39 @@ and `summary.json`.
 
 Do NOT upload SQLite/DuckDB databases. PPMI source coding, actual
 medication state and informative followup remain unvalidated.
+
+## Phase 27 — Fair incremental-value test of multimodal baseline features
+
+Phase26 (586 Prodromal TRAIN patients, 12±3 months) found no MAE or
+RMSE improvement from adding MoCA, RBD, SCOPA or UPSIT over the
+motor-only ridge baseline. Phase27 tests this directly using identical
+ridge implementations and nested regularization selection.
+
+Models: persistence, motor-only ridge, motor+MoCA, motor+MoCA/RBD/SCOPA,
+and motor+MoCA/RBD/SCOPA/UPSIT. Outer 5 folds are identical to Phase24.
+Each outer fit fold performs an inner 3-fold RMSE search over fixed ridge
+penalties (0.01, 0.1, 1, 10, 100); imputation and standardization are
+re-fitted inside each proper training subset. Outer held-out TRAIN patients
+are evaluated once per model, then paired bootstrap contrasts directly
+compare multimodal models versus motor-only ridge and persistence.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase27_fair_incremental.py \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --report-dir ./outputs/phase27_fair_incremental \
+  --folds 5 --seed 20261018 --bootstraps 500
+```
+
+Only share aggregate reports: `nested_multimodal_oof.csv`,
+`incremental_paired_differences.csv`, `inner_penalty_selection.csv`,
+`severity_stratified_errors.csv`, `train_feature_status.csv`,
+`outer_cv_fold_counts.csv`, `summary.json`.
+
+Age remains excluded pending provenance validation. All patient-level
+databases stay on the cluster. This is exploratory within the same
+previously inspected TRAIN population, not independent confirmation.
