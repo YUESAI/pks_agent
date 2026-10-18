@@ -4,6 +4,10 @@ from scripts.phase16_static_adaptive import run_episode, compare
 from scripts.phase13_numeric_policy_cv import train_model
 
 class Phase16Tests(unittest.TestCase):
+ def test_datetime_available_for_audit_summary(self):
+  from scripts import phase16_static_adaptive as module
+  self.assertIsNotNone(module.datetime.now(module.timezone.utc).isoformat())
+
  def test_shared_model_and_budget(self):
   rows=[("PD",True,{"age":"65","motor_exam":"35","smell_test":"15"}),
         ("HC",True,{"age":"65","motor_exam":"4","smell_test":"32"})]*12
