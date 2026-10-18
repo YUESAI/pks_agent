@@ -325,3 +325,43 @@ The collapsed-motor representation combines ON/OFF/UNSPECIFIED
 UPDRS-III *availability*, not raw test scores and not clinical equivalence.
 All clinical test values, incomplete timestamps, and candidate labels require
 further validation before any deployment or scientific performance claim.
+
+## Phase 12 — Fixed-budget, state-blind Doctor–Patient smoke benchmark
+
+**Research status:** retrospective evidence-retrieval simulation only.
+These checks are NOT diagnostic accuracy measurements.
+
+This adds a `BudgetedDoctorPatientEnv` with a fixed, non-personalized
+action catalog: age (cost 0), sleep item (1), cognitive test (1), autonomic
+item (1), state-blind motor exam (2), smell test (2).
+All actions must be explicitly requested; even an unavailable action costs
+its advertised amount. Repeated requests have no additional cost or result.
+
+Motor ON/OFF/UNSPECIFIED are hidden from the Doctor request/response;
+the internal deterministic precedence is UNSPECIFIED > OFF > ON.
+**This does NOT make motor scores physiologically equivalent** or erase
+treatment confounding. It only removes the ON/OFF readiness shortcut.
+All responses omit source paths, dates, patient ID, treatment state and QC
+failure reasons. The patient never volunteers any test result.
+
+Only PPMI TRAIN subjects from the existing locked Phase 10 split are replayed
+under fixed clinical order, reverse order and seeded random order.
+Outputs are aggregate cost, requested-action counts, returned-value counts
+and unavailability, with no per-patient trajectories and no labels.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase12_smoke_benchmark.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase12_smoke \
+  --budget 5 --seed 20261018
+```
+
+Only upload `outputs/phase12_smoke/` reports, not the source DB,
+episode manifest, split DB or raw files. Results do not establish
+unbiased patient diagnosis or chronological evidence availability.
