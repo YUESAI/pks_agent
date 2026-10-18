@@ -721,3 +721,31 @@ Raw PPMI files and local patient databases remain on the cluster.
 These outputs establish pair feasibility only, not treatment-controlled
 progression trajectories or a training-ready World Model. Real-world
 follow-up and medication-state confounding remain to be addressed.
+
+## Phase 23 — Private prodromal 12-month Motor manifest
+
+Fetch Phase 23 from this branch; manual zip upload is no longer needed.
+Input data live separately at `/scratch/ylong66/data/pks/data`.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase23_manifest.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase23_prodromal_manifest \
+  --seed 20261018
+```
+
+Split the complete Prodromal baseline population 70/15/15 before
+selecting observed 12±3-month Motor targets. 6±2 and 24±4 months are
+sensitivity windows. The local SQLite manifest contains patient IDs
+and individual scores including **future** target values. It must
+stay on the research cluster and must NEVER be uploaded or committed.
+Only share the aggregate reports in `outputs/phase23_prodromal_manifest`.
+
+Do not recreate an existing manifest under the same filename; the script
+refuses to overwrite it. UNSPECIFIED medication-state records are not
+verified treatment-matched measurements. Longitudinal clinical code
+definitions and informative follow-up remain unresolved.
