@@ -466,3 +466,40 @@ report folder. Never upload source, manifest or split databases.
 
 All results remain exploratory: clinical labels, motor-condition
 interpretation and true diagnostic timestamps have not been validated.
+
+## Phase 16 — Static IG vs adaptive IG (PPMI TRAIN only)
+
+Phase 15 showed large low-budget improvements versus fixed clinical order,
+but Motor-only is already very discriminative. Phase 16 isolates dynamic
+adaptation by introducing two stronger controls:
+
+- `motor_first`: a fixed, deterministic order starting with Motor.
+- `static_ig`: globally ranked information-gain-per-cost action order,
+  fitted on each training fold without updating for patient responses.
+
+Compare with fixed `clinical` and posterior-updating `adaptive_ig` at
+budgets 1–5. Analyze full PPMI TRAIN only, 5-fold out-of-fold. Both
+motor-allowed and motor-excluded action spaces are tested.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase16_static_adaptive.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase16_static_vs_adaptive \
+  --folds 5 --budgets 1 2 3 4 5 \
+  --seed 20261018 --bootstraps 300
+```
+
+Reports: `policy_comparison_cv.csv`, `paired_adaptivity.csv`,
+`requested_action_counts.csv`, `summary.json`. **Only upload the reports**,
+never the source/manifest/split DBs. The analysis does NOT touch
+PPMI validation/test or BioFIND.
+
+Key interpretation: improvement over a weak fixed sequence does NOT
+establish that adapting to a patient's responses adds value. Compare
+`adaptive_ig` directly against `static_ig` and `motor_first`.
