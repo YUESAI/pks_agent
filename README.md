@@ -617,3 +617,38 @@ IMPORTANT: the bootstrap bound is only an exploratory selection heuristic.
 It is NOT a guarantee of patient safety or prospective diagnostic risk.
 The same original PPMI TRAIN data were inspected in prior phases, so this
 is not fully independent external confirmation.
+
+## Phase 20 — Can PPMI support a longitudinal World Model target?
+
+Phase 19 showed cost savings from stopping, but static PD-versus-HC
+classification remains motor-dominated and lacks demonstrated adaptive
+reordering gains. This phase audits a **different** candidate scientific
+task: follow-up diagnosis code changes and repeated motor observations
+among PPMI prodromal participants.
+
+Run on the **original read-only CSVs** (the code/data directories are separate):
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase20_longitudinal_feasibility.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --output-dir ./outputs/phase20_longitudinal \
+  --min-cell-count 10
+```
+
+Outputs: `longitudinal_feasibility.csv`, `prodromal_transition_summary.csv`,
+`transition_time_bins.csv`, `raw_followup_code_counts.csv`,
+`quality_flags.csv`, `report.md`, `summary.json`. Upload **only** these
+aggregate reports. Do NOT upload CSV source, individual patient records,
+or prior local databases.
+
+Current definitions are provisional: enrollment `COHORT=4` with BL
+`PRIMDIAG=25` for prodromal baseline; future visits with `PRIMDIAG=1`
+strictly later by month count as diagnosis-**code transition candidates**.
+This is NOT clinician-adjudicated PD conversion, and patients missing
+follow-up must not be classified as stable. Month-only timestamps make
+within-month order unknowable. This audit is not a survival model or a
+longitudinal training dataset. Consult official source documentation
+before defining a target, time-to-event or censoring semantics.
