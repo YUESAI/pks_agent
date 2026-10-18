@@ -16,10 +16,12 @@ import hashlib
 import json
 import math
 import sqlite3
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.phase10_leakage_splits import (
     auc, classify_naive_bayes, open_source, score_nb
 )
