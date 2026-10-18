@@ -540,3 +540,39 @@ These are retrospective research simulations. The Naive Bayes posterior
 is NOT calibrated; stop thresholds are score thresholds, not validated
 medical confidence or safety decision rules. Candidate labels and
 mixed motor drug states remain unresolved.
+
+## Phase 18 — Nested confidence calibration for early stopping
+
+Phase 17 suggests Static IG can reduce mean examination cost from 5.000
+to 2.464 at raw confidence 0.90 with nearly identical balanced accuracy
+but lower AUROC. A raw Naive Bayes score is NOT a calibrated probability.
+
+Phase 18 uses only existing frozen PPMI TRAIN patients. Within each
+outer training fold, split patients into proper model-fit and disjoint
+calibration subsets; fit class-balanced weighted isotonic regression on
+partial-score trajectories. Evaluate the resulting stop/no-stop policies
+on the outer TRAIN-held-out fold, never on calibration subjects.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase18_nested_calibration.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase18_calibration \
+  --folds 5 --budget 5 --seed 20261018 --bootstraps 300
+```
+
+Aggregate reports only: `nested_stopping_metrics.csv`,
+`paired_cost_risk_uncertainty.csv`, `nested_calibration_counts.csv`,
+`summary.json`. Do not upload the private `.duckdb`/`.sqlite` files.
+
+CAUTION: Prior Phase17 results already exposed the 0.90 threshold;
+the new evaluation is exploratory, NOT a preregistered independent
+confirmation. Isotonic regression uses class-balanced rather than
+population-prevalence calibration. Neither score threshold is a
+clinically justified safety threshold. Candidate diagnosis and
+motor medication-state semantics remain unvalidated.
