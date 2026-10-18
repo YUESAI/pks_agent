@@ -90,11 +90,35 @@ def candidate_label(cohort,enrollment,diagnosis):
   if enrollment=="2" and diagnosis=="17":return "HC"
  return None
 
-def exam_date(text):
- for fmt in ("%Y-%m-%d","%m/%d/%Y","%d-%b-%Y","%Y/%m/%d","%Y-%m-%d %H:%M:%S"):
-  try:return datetime.strptime(text,fmt).date().isoformat()
+def parse_exam_time(text):
+ """Return (ISO day, ISO month, precision); MM/YYYY is provisional only.
+
+ Never assign a fictitious day of month. Calendar month strings still
+ require verification against the original codebook/export conventions.
+ """
+ raw=str(text).strip() if text is not None else ""
+ if not good(raw):return None,None,"missing"
+ match=re.fullmatch(r"(\d{2})/(\d{4})",raw)
+ if match:
+  month,year=map(int,match.groups())
+  if 1<=month<=12 and 1900<=year<=2100:
+   return None,f"{year:04d}-{month:02d}","month_candidate"
+  return None,None,"unknown"
+ for fmt in ("%Y-%m-%d","%m/%d/%Y","%d-%b-%Y","%Y/%m/%d",
+             "%Y-%m-%d %H:%M:%S","%Y-%m-%dT%H:%M:%S"):
+  try:
+   day=datetime.strptime(raw,fmt).date()
+   return day.isoformat(),day.strftime("%Y-%m"),"day"
   except (ValueError,TypeError):pass
- return None
+ try:
+  day=datetime.fromisoformat(raw.replace("Z","+00:00")).date()
+  return day.isoformat(),day.strftime("%Y-%m"),"day"
+ except ValueError:
+  return None,None,"unknown"
+
+def exam_date(text):
+ """Legacy compatibility; for month-only dates returns None, never day=1."""
+ return parse_exam_time(text)[0]
 
 def connect(db,engine):
  if engine=="duckdb":
@@ -113,7 +137,8 @@ def schema(db):
  PRIMARY KEY(cohort,concept))""")
  db.execute("""CREATE TABLE observations (
  cohort VARCHAR, patient_id VARCHAR, event_id VARCHAR, modality VARCHAR, concept VARCHAR,
- raw_column VARCHAR, value_raw VARCHAR, exam_date VARCHAR, date_status VARCHAR,
+ raw_column VARCHAR, value_raw VARCHAR, exam_date VARCHAR, exam_month VARCHAR,
+ date_status VARCHAR, date_precision VARCHAR, date_source VARCHAR,
  quality_status VARCHAR, medication_state VARCHAR, treatment_status VARCHAR,
  imputed_flag VARCHAR, upsit_source VARCHAR, source_file VARCHAR, source_row INTEGER)""")
  db.execute("""CREATE TABLE visits (
@@ -181,21 +206,27 @@ def build(root,db_path,engine,cohorts,overwrite=False):
         med=get("PDSTATE")
         treatment=get("PDTRTMNT")
         origin=get("UPSIT_SOURCE")
-        day=exam_date(get("INFODT"))
+        raw_exam=get("EXAMDT") if mode.startswith("motor_exam") and get("EXAMDT") else ""
+        time_source="EXAMDT" if raw_exam else "INFODT"
+        raw_exam=raw_exam or get("INFODT")
+        day,month,precision=parse_exam_time(raw_exam)
        except ValueError:
         errors["conflicting_observation_column"]+=1;continue
        quality=("possible_missing_sentinel" if value in SUSPECT_MISSING else
                 "imputed" if imputed.lower() in ("1","yes","true") else "observed_unverified")
        counts[f"{cohort}_{concept}_observations"]+=1
-       yield (cohort,pid,event,mode,concept,raw,value,day,
-              "parseable" if day else "missing_or_unparsed",
+       yield (cohort,pid,event,mode,concept,raw,value,day,month,
+              "parseable" if precision=="day" else precision,
+              precision,time_source,
               quality,med or None,treatment or None,imputed or None,
               origin or None,path.name,row_number)
-    put_batches(db,"INSERT INTO observations VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",stream())
+    put_batches(db,"INSERT INTO observations VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",stream())
   db.execute("""INSERT INTO visits SELECT cohort,patient_id,COALESCE(event_id,''),COUNT(*)
              FROM observations GROUP BY cohort,patient_id,event_id""")
   db.execute("INSERT INTO build_metadata VALUES (?,?)",
              ["status","unvalidated_review_only"])
+  db.execute("INSERT INTO build_metadata VALUES (?,?)",
+             ["schema_version","2_month_precision"])
   db.execute("INSERT INTO build_metadata VALUES (?,?)",
              ["created_at_utc",datetime.now(timezone.utc).isoformat()])
   db.commit()
