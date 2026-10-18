@@ -433,3 +433,36 @@ bootstrap uses identical PPMI train-fold subjects for adaptive and
 clinical ordering. Do not view validation/test/external patients or
 conclude clinical generalization from these exploratory results.
 Never upload or commit private patient database, manifest, or split DB.
+
+## Phase 15 — Motor sensitivity and cost-budget curves
+
+Phase 14 showed that Motor-only discriminates retrospective PPMI candidate
+PD/HC with AUROC ~0.97, while the Adaptive-minus-Clinical paired bootstrap
+interval includes zero. Phase 15 examines budget dependence and motor-state
+selection using only the previously frozen **PPMI TRAIN** split.
+
+The comparisons include budgets 1, 2, 3, 4, 5, four request policies,
+and two action spaces: motor allowed vs motor entirely excluded.
+Two populations: all PPMI TRAIN patients and a selection-biased
+motor-UNSPECIFIED-ready TRAIN subgroup. A subgroup is not a new test cohort.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase15_motor_budget.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase15_motor_budget \
+  --folds 5 --budgets 1 2 3 4 5 \
+  --seed 20261018 --bootstraps 300
+```
+
+Outputs: `budget_policy_cv.csv`, `paired_policy_differences.csv`,
+`population_counts.csv`, and `summary.json`. Only upload this aggregate
+report folder. Never upload source, manifest or split databases.
+
+All results remain exploratory: clinical labels, motor-condition
+interpretation and true diagnostic timestamps have not been validated.
