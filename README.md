@@ -503,3 +503,40 @@ PPMI validation/test or BioFIND.
 Key interpretation: improvement over a weak fixed sequence does NOT
 establish that adapting to a patient's responses adds value. Compare
 `adaptive_ig` directly against `static_ig` and `motor_first`.
+
+## Phase 17 — Should the Doctor STOP rather than spend the whole budget?
+
+Phase 16 found that Adaptive IG and Static IG have nearly identical
+diagnostic performance and dynamic order changes did not produce a
+measurable advantage. Phase 17 therefore studies early stopping and
+cost/utility instead of asserting an RSI contribution.
+
+Run only on the frozen PPMI TRAIN set (5-fold OOF); no validation, test,
+or BioFIND patient records are loaded. Compare Clinical, Motor-first,
+Static IG, and Adaptive IG; budgets 2, 3, 5; motor allowed vs excluded.
+Stop if uncalibrated Naive Bayes score confidence passes one of the
+prespecified exploratory thresholds 0.70, 0.80, 0.90, 0.95, 0.99;
+also run a no-stop reference. Stopping requires at least one valid
+paid-test result.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase17_early_stopping.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/phase17_stopping \
+  --folds 5 --budgets 2 3 5 --seed 20261018
+```
+
+Outputs: `stopping_policy_cv.csv` (aggregated balanced accuracy, AUROC,
+macro-F1, average cost, result count, stop rate, class-balanced Brier),
+`summary.json`. Upload only the aggregated report folder, NOT DBs.
+
+These are retrospective research simulations. The Naive Bayes posterior
+is NOT calibrated; stop thresholds are score thresholds, not validated
+medical confidence or safety decision rules. Candidate labels and
+mixed motor drug states remain unresolved.
