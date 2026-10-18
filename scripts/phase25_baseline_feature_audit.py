@@ -195,7 +195,7 @@ def audit(source_db,engine,manifest_db,report_dir,minimum=10):
         raise ValueError("Unsafe report path or min-cell-count < 10")
     people,readiness=load_train_people(manifest_db)
     ids=sorted(people)
-    all_obs=source_rows(source_db,engine,set(ids))
+    all_obs=source_rows(source_db,engine,ids)
     counts=Counter()
     group_totals=Counter()
     joint=Counter()
