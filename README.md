@@ -294,3 +294,34 @@ Phase 10 also makes unavailable actions return generic `not_available` from
 the Doctor-facing API, without exposing the source QC failure reason.
 That does not remove availability as a possible shortcut; robust benchmarking
 must explicitly compare the availability-only baseline.
+
+## Phase 11 — Train-only protocol preflight (after Phase 10)
+
+**Do not regenerate the Phase 10 split.** Phase 10 test metrics have already
+been inspected and should be treated as exploratory. This preflight fits
+availability-only Bernoulli models using PPMI TRAIN only, evaluated with
+5-fold patient-level cross-validation. No validation, test, or BioFIND
+predictions are computed.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest discover -s tests -v
+python scripts/phase11_protocol_preflight.py \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --split-db ./outputs/episode_splits/splits_v0.sqlite \
+  --report-dir ./outputs/protocol_preflight \
+  --folds 5 --seed 20261018
+```
+
+Reports: `train_only_shortcut_cv.csv` (raw-action, collapsed-motor,
+nonmotor-only baselines), `train_action_family_bias.csv`,
+`frozen_split_counts.csv`, `summary.json`. Upload **only** the aggregate
+`outputs/protocol_preflight/` folder, NOT any DB.
+
+The collapsed-motor representation combines ON/OFF/UNSPECIFIED
+UPDRS-III *availability*, not raw test scores and not clinical equivalence.
+All clinical test values, incomplete timestamps, and candidate labels require
+further validation before any deployment or scientific performance claim.
