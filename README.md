@@ -216,3 +216,41 @@ New observation columns: `exam_month` (YYYY-MM), `date_precision`
 NOTE: This is a review-only database. The baseline anchor is the visit-start
 month, NOT a verified diagnosis decision; exam and anchor in the same month
 remain temporally unordered. Do not merge SC+BL episodes for training yet.
+
+## Phase 9 — Retrospective doctor-patient episode manifest
+
+Input: existing `outputs/patient_db/pks_v2.duckdb` and original PPMI
+`Baseline_Visit_Start` file. Source data and code can live in separate directories.
+
+The local SQLite manifest is **patient-level** (contains IDs, observation provenance)
+and must remain on the authorized research cluster. The separate reports are
+aggregate only. No diagnostic labels are included in the Doctor-facing manifest.
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/episode_manifest_v0.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --source-db ./outputs/patient_db/pks_v2.duckdb \
+  --source-engine duckdb \
+  --manifest-db ./outputs/episode_manifests/episodes_v0.sqlite \
+  --report-dir ./outputs/episode_manifest_report \
+  --screening-window-months 6
+```
+
+Upload only `outputs/episode_manifest_report/` (after reviewing contents),
+**NOT** `episodes_v0.sqlite`, `pks_v2.duckdb`, raw patient CSV files, or row-level results.
+
+The manifest offers 3 motor conditions where present: `ON`, `OFF`, `UNSPECIFIED`.
+Conflicting repeated exams are not silently deduplicated. `UPSIT` may fall
+back to `SC` only when its month is strictly earlier than the `BL` visit-start
+month, within 6 months. BL exams may be same-month and cannot be guaranteed
+to predate a clinical diagnosis. BioFIND remains BL-only and post-dose motor
+measurements are not equated with PPMI motor totals.
+
+`scripts/doctor_patient_env_v0.py` exposes `list_actions()` and `order_test()`.
+These methods have no diagnosis-label API. This is an application-level boundary,
+not operating-system/database security isolation; keep the private source DB protected.
+
+Task framing: **retrospective evidence acquisition from recorded data**,
+not a prospective, time-faithful diagnostic reconstruction or a training-ready
+world model. Do not interpret unrecorded tests as negative results.
