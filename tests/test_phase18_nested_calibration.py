@@ -25,7 +25,8 @@ class Phase18Tests(unittest.TestCase):
   self.assertLessEqual(trajectory[-1][1],5)
   self.assertEqual(choose_snapshot(trajectory,"no_stop")[:2],
                    (trajectory[-1][0],trajectory[-1][1]))
-  sample={"a":(True,2.,2,True,.8),"b":(False,-2.,2,False,.2)}
+  sample={"a":(True,2.,2,True,.8),"b":(False,-2.,2,False,.2),
+          "c":(True,1.,2,True,.7),"d":(False,-1.,2,False,.3)}
   metrics=summarize(list(sample.values()))
   self.assertEqual(metrics["balanced_accuracy"],1.)
   intervals=paired_delta(sample,sample,100,17)
