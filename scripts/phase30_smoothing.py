@@ -8,7 +8,7 @@ from statistics import mean
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from scripts.phase24_motor_baselines import fixed_folds,metrics
 from scripts.phase26_multimodal_oof import fit_multi,predict_multi
-from scripts.phase29_sequential import load,model_rows,tune,pair_diff
+from scripts.phase29_sequential import load,matrix,tune,pair_diff
 
 WEIGHTS=(0.,.125,.25,.375,.5,.625,.75,.875,1.)
 MODELS=("last_value","midpoint","weighted_blend","ridge_last","ridge_bl_last")
@@ -54,8 +54,8 @@ def run(manifest,report,folds=5,seed=20261018,bootstraps=500):
         weight=choose_weight(training)
         fitted={}
         for m in ("ridge_last","ridge_bl_last"):
-            penalty=tune(training,m,held,seed)
-            rows,names=model_rows(training,m)
+            penalty=tune(training,m,seed,held)
+            rows,names=matrix(training,m)
             fitted[m]=fit_multi(rows,names,penalty)
         weights.append({"fold":held,"n_fit":len(training),
                         "n_test":len(test),"baseline_weight":weight})
