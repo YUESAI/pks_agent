@@ -1231,3 +1231,38 @@ zip -r pks_phase41_report.zip outputs/phase41_future_risk
 
 Only upload the aggregated Phase41 ZIP, not PPMI raw data, private
 longitudinal SQLite, individual predictions, clinical labels or IDs.
+
+## Phase 42 — Full R01 cohort bounds under missing future V04 labels
+
+Phase41 used 199 TRAIN patients with complete real R01 to later V04
+observations and showed real R01 visible-total AUROC 0.68055, AP
+0.49334 for a FUTURE V04 nonzero six-item score. At a 20% budget
+among complete cases, 22/58 future-positive people were selected
+(37.93%) versus about 20.13% with repeated random selection. But
+30/229 eligible R01 subjects lack a qualifying V04 future label.
+
+Phase42 re-ranks ALL 229 R01 subjects at fixed 10/20/30/40/50% exact
+budgets with Phase41's identical visible-total score and deterministic
+hash tie breaks. An unobserved future outcome remains UNKNOWN, never
+imputed as zero. The output provides sharp identification bounds for
+precision@k and recall@k across all assignments of the missing binary
+labels, plus tie-seed sensitivity and later-V04 observability by
+R01 score. These are NOT sampling confidence intervals or a causal
+estimate of referral benefit. Future labels are for months-later V04,
+not R01 same-day hidden scores.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase42_missing_followup_bounds.py
+python -m unittest tests.test_phase42_missing_followup_bounds -v
+python scripts/phase42_missing_followup_bounds.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase42_missing_followup_bounds \
+  --seed 20261018 --tie-repeats 100 --min-cell-count 10
+zip -r pks_phase42_report.zip outputs/phase42_missing_followup_bounds
+```
+
+Only share the aggregate Phase42 report ZIP. Never upload raw PPMI
+records, patient-level followup labels, decisions, or SQLite manifest.
