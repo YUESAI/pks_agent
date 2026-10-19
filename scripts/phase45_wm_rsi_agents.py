@@ -104,7 +104,7 @@ def inner_split(records,seed):
                      key=lambda r:hashkey(seed,r["pid"]))
         n=max(1,int(round(.25*len(group))))
         dev+=group[:n];train+=group[n:]
-    if len(train)<30 or len(dev)<15:return ValueError("Too few independent inner samples")
+    if len(train)<30 or len(dev)<15:raise ValueError("Too few independent inner samples")
     return train,dev
 
 
