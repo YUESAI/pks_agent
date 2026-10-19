@@ -31,10 +31,10 @@ class Phase46Tests(unittest.TestCase):
     assert "NEVER_TO_PROMPT" not in text
     assert "hidden" not in str(messages[-1]["content"]).lower() or "hidden-six" in text
     return super().generate(messages)
-  agent=CapturingBackend(['{"ask":"NP3RIGN"}','{"ask":"NP3FACXP"}'])
+  agent=CapturingBackend(['{"ask":"NP3RIGN"}','{"ask":"NP3RIGN"}'])
   result=llm_doctor_rollout(wm,record,agent,items,2,"llm_wm")
   self.assertEqual(result["observed_count"],2)
-  self.assertEqual(result["invalid_action_fallbacks"],1)
+  self.assertEqual(result["invalid_action_fallbacks"],2)
  def test_mode_hides_wm_when_plain(self):
   p=make_messages(["A"],{},.8,{"A":.1},"llm_plain")
   self.assertNotIn("0.8000",str(p))
