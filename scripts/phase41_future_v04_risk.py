@@ -254,7 +254,7 @@ def run(root,manifest,out,seed=20261018,bootstraps=500,
             budget_rows.append({
                 "nominal_budget_pct":int(budget*100),
                 "ranking":name,"selected_n":stat["selected_n"],
-                "captured_future_positive":round(stat["captured_positives"],3),
+                "captured_future_positive":(round(stat["captured_positives"],3) if stat["captured_positives"]>=minimum or stat["captured_positives"]==0 else f"<{minimum}"),
                 "positive_recall":round(stat["positive_recall"],5),
                 "future_hidden_burden_captured_pct":round(
                     100*stat["burden_fraction"],3),
