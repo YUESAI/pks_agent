@@ -959,3 +959,31 @@ zip -r pks_phase31_report.zip outputs/phase31_motor_repetitions
 ```
 
 Upload only aggregate reports. Never upload the private manifest, identifiers, clinical scores, dates, or raw data. This audit does not reconcile the frozen manifest or infer test-retest measurement error from different exams.
+
+
+## Phase 32 — Reconcile Phase23 exclusions with Phase31 raw records
+
+Phase31 showed that zero TRAIN keys had different scores from repeated
+visits, while invalid/missing NP3TOT dominates the 6-month window.
+Phase23's 583 excluded keys counted *all* Prodromal splits; Phase31 used
+TRAIN only and aggregated by target window. Phase32 reproduces exactly
+the Phase23 per-patient BL/FU/month key and verifies the frozen TRAIN
+manifest without rewriting it. It reports missing-only, sentinel, out-of-
+range, invalid+valid and genuine repeated-score categories, with source
+visit-category frequencies. Any nonzero target/readiness mismatch blocks
+interpreting Phase23-derived modeling results until resolved.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase32_exclusion_forensics -v
+python scripts/phase32_exclusion_forensics.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase32_exclusion_audit \
+  --min-cell-count 10
+zip -r pks_phase32_report.zip outputs/phase32_exclusion_audit
+```
+
+Upload **only** the aggregate Phase32 zip, not source CSVs or patient
+manifest. This script does not change the previously frozen split or targets.
