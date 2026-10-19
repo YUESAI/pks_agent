@@ -25,7 +25,7 @@ class Phase35Tests(unittest.TestCase):
     w.writerow(["TRAIN_ID","V04","3","12/2026","",*["1"]*6,*["2"]*21])
     w.writerow(["TEST_ID","R01","","06/2026","",*["101"]*6,*["2"]*21])
    out=root/"report";summary=calculate(raw.parent,db,out,10)
-   self.assertEqual(summary["R01_six_month_blank_total_rows_processed"],1)
+   self.assertEqual(summary["R01_six_month_blank_total_rows_processed"],"<10")
    with (out/"remote_clinic_overlap.csv").open() as f:
     lines=list(csv.DictReader(f))
    self.assertEqual(next(r["TRAIN_patients"] for r in lines if r["measure"]=="V04_valid_total_patient"),"<10")
