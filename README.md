@@ -987,3 +987,22 @@ zip -r pks_phase32_report.zip outputs/phase32_exclusion_audit
 
 Upload **only** the aggregate Phase32 zip, not source CSVs or patient
 manifest. This script does not change the previously frozen split or targets.
+
+
+## Phase 33 — Why are 6-month Part III totals blank?
+
+Phase32 verified **zero** mismatches to the frozen Phase23 TRAIN manifest: 34/586/377 targets at 6/12/24 months, respectively. The 410 excluded TRAIN patient-month keys all had missing `NP3TOT` rather than conflicting numeric scores; 286 of these were in the 6-month window. This read-only preflight reports privacy-suppressed literal source `EVENT_ID` frequencies, valid/empty Motor totals and the number of populated `NP3*` item fields when the total is missing. It does **not** reconstruct totals or alter the split.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase33_visit_audit -v
+python scripts/phase33_visit_audit.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase33_visit_audit \
+  --min-cell-count 10
+zip -r pks_phase33_report.zip outputs/phase33_visit_audit
+```
+
+Only upload the aggregated report ZIP; never upload patient IDs, scores, source CSVs or the private manifest. The audit does not validate PPMI event codes or test-retest noise.
