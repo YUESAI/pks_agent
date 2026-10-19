@@ -11,6 +11,7 @@ from pathlib import Path
 
 ALLOWED={
     "text":"Qwen/Qwen3-0.6B",
+    "doctor":"Qwen/Qwen3-4B-Instruct-2507",
     "vlm":"Qwen/Qwen2.5-VL-3B-Instruct",
 }
 
@@ -43,7 +44,7 @@ def main():
         "repo":model,"revision_requested":args.revision,
         "absolute_dir":str(Path(downloaded).resolve()),
         "generated_utc":datetime.now(timezone.utc).isoformat(),
-        "purpose":"optional LLM/VLM input cache; not used in Phase45 CPU benchmark",
+        "purpose":"offline Qwen doctor backbone; Phase45 CPU experiment does not use it",
     }
     (dest/"pks_model_provenance.json").write_text(
         json.dumps(manifest,indent=2)+chr(10))
