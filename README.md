@@ -1028,3 +1028,22 @@ zip -r pks_phase34_report.zip outputs/phase33_visit_audit_corrected outputs/phas
 ```
 
 Upload ONLY the aggregate zip. Do not reconstruct or replace missing NP3TOT or alter the frozen manifest based on these findings. Source documentation: https://blackfynn-ppmi2-curation.readthedocs-hosted.com/en/stable-documentation-branch/documentation_files/motor_assessments/tables/NUPDRS3.html .
+
+
+## Phase 35 — Confirm numeric 101 at remote R01 and longitudinal coverage
+
+The corrected Phase33 summary confirms 33 NP3 item-like columns. Phase34 found that among 286 six-month R01 rows with blank NP3TOT, the five rigidity fields and postural-stability field almost always contain a non-0-to-4 code, **not** literal `UR`. Phase35 checks how often those fields are numeric `101` (unable to rate in the PPMI paper CRF), counts other NP3 item presence, and audits whether the same TRAIN patients later have a valid in-person V04 total. The later V04 is NOT a paired same-day reference assessment.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase35_remote_101 -v
+python scripts/phase35_remote_101.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase35_remote_101 \
+  --min-cell-count 10
+zip -r pks_phase35_report.zip outputs/phase35_remote_101
+```
+
+Only upload aggregate Phase35 report files. Never upload PPMI source CSV, private manifest, individual values, or identifiers. This does not reconstruct totals or validate a clinical agent.
