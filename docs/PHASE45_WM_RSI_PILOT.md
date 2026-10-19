@@ -144,3 +144,22 @@ transcripts containing record values or the SQLite manifest.
 Do not choose hyperparameters based on Phase43 Validation or Phase44
 consumed TEST. Successful TRAIN-only pilot results require a new
 independent confirmation cohort before any final new research claim.
+
+## Recommended first science sweep: three Dusky CPU jobs
+
+The CPU array evaluates **q=4, q=8, q=12** remote item requests with
+identical recorded TRAIN cohort and fixed seed. These are exploratory
+TRAIN experiments, not independent hypothesis tests. It creates one
+scratch aggregate directory per task:
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+sbatch slurm/phase45_dusky_cpu_array.sbatch
+squeue -u "$USER"
+```
+
+Outputs:
+`/scratch/ylong66/pks_agent_outputs/phase45_sweep_<array_job_id>/q4/`,
+`q8/`, `q12/` (only aggregate CSV and summary JSON). Compare
+`model_metrics.csv` and `evolution_trace.csv` across question budgets.
+Check Slurm stdout/stderr in `slurm-phase45-array-<jobid>_<task>.log`.
