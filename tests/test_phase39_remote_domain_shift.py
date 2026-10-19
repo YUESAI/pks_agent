@@ -3,6 +3,7 @@ import csv,sqlite3,tempfile,unittest
 from pathlib import Path
 from scripts.phase39_remote_domain_shift import audit,ks_distance,threshold_benchmark
 from scripts.phase36_masked_site_feasibility import ALL,HIDDEN
+from scripts.phase22_strict_motor_pairs import parse_month
 
 class Phase39Tests(unittest.TestCase):
  def test_ks_and_threshold(self):
@@ -13,6 +14,10 @@ class Phase39Tests(unittest.TestCase):
   result=threshold_benchmark(site,remote,paired,.5)
   self.assertEqual(result["site_selected_n"],1)
   self.assertEqual(result["remote_selected_n"],0)
+ def test_month_anchor_is_december_2025(self):
+  anchor=parse_month("12/2025")
+  self.assertEqual(parse_month("06/2026")-anchor,6)
+  self.assertEqual(parse_month("12/2026")-anchor,12)
  def test_train_only_aggregate(self):
   with tempfile.TemporaryDirectory() as td:
    base=Path(td);src=base/"data"/"PPMI";src.mkdir(parents=True)
@@ -21,9 +26,9 @@ class Phase39Tests(unittest.TestCase):
     conn.execute("CREATE TABLE patients(pid TEXT,split TEXT,baseline_month INTEGER)")
     for i in range(15):
      conn.execute("INSERT INTO patients VALUES (?,?,?)",
-                  ("PRIVATE_TRAIN_"+str(i),"train",2025*12))
+                  ("PRIVATE_TRAIN_"+str(i),"train",parse_month("12/2025")))
     conn.execute("INSERT INTO patients VALUES (?,?,?)",
-                 ("PRIVATE_TEST","test",2025*12))
+                 ("PRIVATE_TEST","test",parse_month("12/2025")))
    with (src/"MDS-UPDRS_Part_III_06Oct2026.csv").open("w",newline="") as file:
     writer=csv.writer(file)
     writer.writerow(["PATNO","EVENT_ID","EXAMDT","NP3TOT","PDSTATE",*ALL])
