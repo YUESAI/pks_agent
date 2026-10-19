@@ -1047,3 +1047,24 @@ zip -r pks_phase35_report.zip outputs/phase35_remote_101
 ```
 
 Only upload aggregate Phase35 report files. Never upload PPMI source CSV, private manifest, individual values, or identifiers. This does not reconstruct totals or validate a clinical agent.
+
+
+## Phase 36 — Same-visit masked in-person Motor benchmark feasibility
+
+Phase35 confirms 274/286 blank-total R01 records have numeric 101 in all six hands-on items, and 265/286 have 20+ additional numeric item fields. Importantly, 227 TRAIN patients have such a partial remote exam followed months later by a valid V04 clinic total. The later V04 score is **NOT** same-visit ground truth for R01.
+
+To test whether a simulated remote Agent can infer missing items without temporal leakage, Phase36 first audits original V04 on-site Part III exams with all 33 clinical item scores and checks whether the 33-item sum equals the recorded NP3TOT. Those eligible exams may be masked at the **same visit** (hide the six remote-unobservable items) in a future patient-level local benchmark. Actual R01 remote exam visible-item distribution is separately audited for domain shift; no imputations are performed by Phase36.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase36_masked_site_feasibility -v
+python scripts/phase36_masked_site_feasibility.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase36_masked_site \
+  --min-cell-count 10
+zip -r pks_phase36_report.zip outputs/phase36_masked_site
+```
+
+Upload only the aggregate report ZIP, not PPMI source CSVs or patient manifest. Phase36 is TRAIN-only, descriptive, and does not assert any remote-to-onsite simultaneous truth pairs. The 33-item sum check must be passed before creating any local patient-level masked benchmarking episodes.
