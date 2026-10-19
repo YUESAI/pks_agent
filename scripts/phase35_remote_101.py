@@ -83,7 +83,7 @@ def calculate(root,manifest,out,minimum=10):
             if state!="UNSPECIFIED":
                 continue
             gap=month-anchors[pid]
-            if event=="V04" and 9<=gap<=15 and status(total)=="other":
+            if event=="V04" and 9<=gap<=15:
                 # Verify the full total is a valid finite 0..132 number.
                 try:valid_total=0<=float(total)<=132 and math.isfinite(float(total))
                 except ValueError:valid_total=False
