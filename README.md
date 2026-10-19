@@ -1337,3 +1337,19 @@ zip -r pks_phase44_report.zip outputs/phase44_locked_final_test
 
 Do not use TEST to retune ranking, budgets, or model choice; report
 negative/inconclusive results as such. No patient-level data exported.
+
+## Frozen research record through Phase 44 (2026-10-19)
+
+**Do not retune after held-out final testing:** the original Phase44
+TEST split is already consumed. The evidence ledger and final policy:
+
+- [Verified Phase23–44 results, assumptions and locked 20% policy](docs/RESEARCH_SNAPSHOT_PHASE23_44.md)
+- [Reproduction guide and safe metadata commands](docs/phase23_44_reproduction.md)
+- [Original private report ZIP SHA256 manifest](docs/phase23_44_report_index.csv)
+- [Architecture decision: multi-agent, World Model and RSI](docs/ADR_AGENT_WM_RSI.md)
+- [Precommitted VAL policy](docs/phase43_frozen_validation_protocol.md)
+- [Precommitted final TEST policy](docs/phase44_final_test_protocol.md)
+
+Original aggregate report ZIPs and all subject-level data remain outside
+the public repository. Report-level percentages may disclose small cells;
+do not copy raw report ZIPs into GitHub.
