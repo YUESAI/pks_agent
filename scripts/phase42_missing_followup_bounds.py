@@ -19,9 +19,63 @@ import csv
 import hashlib
 import json
 import math
+import sys
 from collections import Counter
 from datetime import datetime,timezone
 from pathlib import Path
+
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from scripts.phase36_masked_site_feasibility import (
+    VISIBLE,HIDDEN,parse_rows,unique_by_patient
+)
+from scripts.phase31_motor_repetitions import train_anchors
+from scripts.phase22_strict_motor_pairs import one_file
+
+def load_train_pairs(root,manifest):
+    """Match Phase41's exact R01 / later V04 eligibility without importing it.
+
+    Preserve the Phase36 record parsing and conservative one-exam-per-event
+    restriction. Retain identifiers and scores only in local process memory.
+    """
+    anchors=train_anchors(manifest)
+    source=one_file(root/"PPMI","MDS-UPDRS_Part_III_")
+    qc=Counter()
+    selected=unique_by_patient(parse_rows(source,anchors,qc),qc)
+    remote={}
+    onsite={}
+    for (pid,event),(month,fields,total) in selected.items():
+        if any(fields[name][0]!="valid" for name in VISIBLE):
+            qc[event+"_visible_incomplete"]+=1
+            continue
+        visible=sum(fields[name][1] for name in VISIBLE)
+        if event=="R01":
+            if total is None and all(fields[name][0]=="unable" for name in HIDDEN):
+                remote[pid]=(month,visible)
+            else:
+                qc["R01_not_six_unrateable"]+=1
+        elif event=="V04":
+            if (total is not None and
+                all(fields[name][0]=="valid" for name in HIDDEN) and
+                visible+sum(fields[name][1] for name in HIDDEN)==total):
+                onsite[pid]=(month,visible,
+                             sum(fields[name][1] for name in HIDDEN))
+            else:
+                qc["V04_not_complete_same_visit"]+=1
+    paired=[]
+    for pid in sorted(remote.keys() & onsite.keys()):
+        rmonth,rscore=remote[pid]
+        vmonth,vscore,hidden=onsite[pid]
+        if vmonth<=rmonth:
+            qc["V04_not_after_R01"]+=1
+            continue
+        paired.append({
+            "pid":pid,"remote_sum":rscore,
+            "future_visible_sum":vscore,"future_six":hidden,
+            "gap":vmonth-rmonth,
+        })
+    return paired,remote,onsite,qc,source,len(anchors)
+
 
 BUDGETS=(.10,.20,.30,.40,.50)
 BINS=(("0",0,0),("1_to_3",1,3),("4_to_7",4,7),("8plus",8,108))
@@ -213,7 +267,6 @@ def audit(root,manifest,out,seed=20261018,tie_repeats=100,minimum=10):
         raise ValueError("Unsafe report directory")
     if minimum<10 or tie_repeats<20:
         raise ValueError("Unsafe audit settings")
-    from scripts.phase41_future_v04_risk import load_train_pairs
     paired,remote,site,qc,source,train_registry=load_train_pairs(root,manifest)
     registry=build_registry(remote,paired)
     budget,ties=run_calibration(registry,seed,tie_repeats,minimum)
