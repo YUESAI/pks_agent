@@ -1193,3 +1193,41 @@ zip -r pks_phase40_report.zip outputs/phase40_budget_calibration
 
 Only send the aggregate ZIP; raw PPMI data, private SQLite, identifiers,
 individual ranks, decisions and visit scores must remain on the cluster.
+
+## Phase 41 — Observational future onsite risk from real R01 (TRAIN only)
+
+Phase40 found that exact budgets are feasible, but patient risk ranks
+change over the six-month R01-to-V04 interval: Spearman 0.5992
+(bootstrap 95% 0.4901–0.6909); 20% top-k selection retained 22/40
+patients across exams, not a stable identical patient list.
+
+Phase41 is a DIFFERENT, observable research endpoint: only use a
+patient's 27-item VISIBLE score from actual earlier remote R01 to rank
+risk that the SIX hidden items at their LATER V04 clinic exam are
+nonzero. This is NOT the missing same-visit R01 ground truth, a clinical
+referral effect, or a causal value-of-information estimate.
+Only 199 or fewer paired TRAIN patients with verified V04 item sums
+may be eligible. Compare R01 visible-score ordering against repeated
+random exact-quota rankings, at budgets 10/20/30/40/50%. Provide
+tie-seed sensitivity, patient bootstrap intervals for recall lift over
+random-budget expectation, nonzero AUROC/AP, outcome prevalence
+by R01 score stratum, and selection into complete V04 followup.
+V04 visible-score and full hidden-six outcome rankings are shown as
+RETROSPECTIVE references ONLY, never as R01 policy inputs.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase41_future_v04_risk.py
+python -m unittest tests.test_phase41_future_v04_risk -v
+python scripts/phase41_future_v04_risk.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase41_future_risk \
+  --seed 20261018 --bootstraps 500 \
+  --random-repeats 500 --tie-repeats 100 --min-cell-count 10
+zip -r pks_phase41_report.zip outputs/phase41_future_risk
+```
+
+Only upload the aggregated Phase41 ZIP, not PPMI raw data, private
+longitudinal SQLite, individual predictions, clinical labels or IDs.
