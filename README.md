@@ -1302,3 +1302,38 @@ Upload ONLY the aggregate Phase43 report ZIP. Do NOT tune based on
 this validation result or open TEST. This remains observational risk
 stratification about later V04 scores, not evidence that an onsite
 referral at R01 benefits patients.
+
+## Phase 44 — Pre-registered final TEST (do not run casually)
+
+Phase43 one-shot Validation had 49 eligible remote R01 patients,
+41 with known future onsite V04 label, and 13 future six-positive.
+Locked 20% R01 top-k selected 10 of 49. Missing-outcome worst-case
+recall was 25.00%, versus 20.41% expected for random allocation
+(directional primary +4.59 percentage points). Complete-case AUROC
+was 0.61401 and AP 0.42286. These are small-sample observational
+results, not significance or causal clinic-referral evidence.
+
+Final TEST was NOT used to choose any strategy. A frozen, unchangeable
+one-shot Phase44 protocol is in docs/phase44_final_test_protocol.md.
+The evaluator is a strict copy of Phase43's eligibility, fixed 20%
+budget and risk-score hash tie policy, except it accesses ONLY original
+Phase23 split='test'. It rejects invocation without the explicit
+--confirm-final-test flag and refuses an already existing report path.
+
+Only after deciding to permanently consume the final TEST split:
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase44_locked_final_test.py
+python -m unittest tests.test_phase44_locked_final_test -v
+python scripts/phase44_locked_final_test.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase44_locked_final_test \
+  --confirm-final-test
+zip -r pks_phase44_report.zip outputs/phase44_locked_final_test
+```
+
+Do not use TEST to retune ranking, budgets, or model choice; report
+negative/inconclusive results as such. No patient-level data exported.
