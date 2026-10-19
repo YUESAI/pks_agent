@@ -1,5 +1,6 @@
 """Synthetic Phase42 tests for sharp unknown-followup bounds and privacy."""
-import csv,sqlite3,tempfile,unittest
+import csv,sqlite3,tempfile,unittest,sys
+from unittest.mock import patch
 from pathlib import Path
 from scripts.phase42_missing_followup_bounds import (
     exact_bounds,build_registry,topk,audit
@@ -48,7 +49,8 @@ class Phase42Tests(unittest.TestCase):
                   sum(onsite),"",*onsite])
     w.writerow(["PRIVATE_TEST","V04","12/2026","132","",*[4]*33])
    output=root/"reports"
-   result=audit(raw.parent,manifest,output,42,20,10)
+   with patch.dict(sys.modules,{"scripts.phase41_future_v04_risk":None}):
+    result=audit(raw.parent,manifest,output,42,20,10)
    self.assertEqual(result["all_eligible_R01_patients"],35)
    self.assertEqual(result["future_V04_observed"],25)
    self.assertEqual(result["future_V04_missing"],10)
