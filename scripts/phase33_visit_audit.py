@@ -90,11 +90,11 @@ def analyze(root,manifest,out,minimum=10):
     allowed={e for e,ps in patients.items()
              if len(ps)>=minimum and e!="UNUSUAL_CODE"}
     counts=Counter();subject=defaultdict(set)
-    for window,event,total,items,pid in records:
+    for window,event,total,item_label,pid in records:
         group=event if event in allowed else "RARE_EVENT_CODES"
         counts[(window,group,"rows")]+=1
         counts[(window,group,total)]+=1
-        if total!="valid":counts[(window,group,"items_"+items)]+=1
+        if total!="valid":counts[(window,group,"items_"+item_label)]+=1
         subject[(window,group)].add(pid)
     out.mkdir(parents=True,exist_ok=True)
     events=[];item_counts=[]
