@@ -201,8 +201,7 @@ def audit(root,manifest,out,min_cell=10):
             "No patient-level observations, labels, dates or predictions exported.",
             "No patient split changed; no val/test queried.",
         ],"generated_utc":datetime.now(timezone.utc).isoformat()}
-    (out/"summary.json").write_text(json.dumps(summary,indent=2)+"
-")
+    (out/"summary.json").write_text(json.dumps(summary,indent=2)+"\n")
     return summary
 
 def main():
