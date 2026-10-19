@@ -940,3 +940,22 @@ zip -r pks_phase30_report.zip outputs/phase30_smoothing
 ```
 
 Upload only aggregate Phase30 reports. Model improvement from two observations could be smoothing of measurement variability rather than disease dynamics.
+
+
+## Phase 31 — TRAIN-only repeated Motor-record audit
+
+Phase30 showed that averaging BL and 12-month Motor scores improves both MAE and RMSE relative to last-value persistence, while the two-visit Ridge model was not better on both metrics. This does **not** establish that observation noise is the cause. Phase31 classifies raw PPMI MDS-UPDRS III duplicated patient-month keys as exact repeated rows, distinct visits with equal scores, conflicting visits with different scores, conflicting values within an event, or invalid values. Baseline requires `EVENT_ID=BL` and the same BL anchor month; later visits require a non-BL event and strictly later exam month. Only Phase23 TRAIN participants are processed.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase31_motor_repetitions -v
+python scripts/phase31_motor_repetitions.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase31_motor_repetitions \
+  --min-cell-count 10
+zip -r pks_phase31_report.zip outputs/phase31_motor_repetitions
+```
+
+Upload only aggregate reports. Never upload the private manifest, identifiers, clinical scores, dates, or raw data. This audit does not reconcile the frozen manifest or infer test-retest measurement error from different exams.
