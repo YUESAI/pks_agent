@@ -29,9 +29,9 @@ class Phase40Tests(unittest.TestCase):
     w=csv.writer(f)
     w.writerow(["PATNO","EVENT_ID","EXAMDT","NP3TOT","PDSTATE",*ALL])
     for i in range(30):
-     remote=[("101" if item in HIDDEN else str((i+j)%3))
+     remote=[("101" if item in HIDDEN else str(i%3))
              for j,item in enumerate(ALL)]
-     onsite=[str((i+j+1)%3) for j,item in enumerate(ALL)]
+     onsite=[str((i+1)%3) for j,item in enumerate(ALL)]
      w.writerow(["TRAIN_PRIVATE_"+str(i),"R01","06/2026","", "",*remote])
      w.writerow(["TRAIN_PRIVATE_"+str(i),"V04","12/2026",
                  str(sum(map(int,onsite))),"",*onsite])
