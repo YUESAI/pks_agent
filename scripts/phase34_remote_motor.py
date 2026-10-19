@@ -56,7 +56,7 @@ def audit(root,manifest,out,min_cell=10):
             events=value("EVENT_ID")
             if not events or len(set(events))>1:continue
             event=events[0].upper()
-            dates=value("EXAMDT") or value("INFODT")
+            dates=([x for x in value("EXAMDT") if x] or [x for x in value("INFODT") if x])
             if not dates or len(set(dates))>1:continue
             month=parse_month(dates[0])
             if month is None:continue
