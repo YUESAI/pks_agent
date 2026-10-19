@@ -1376,3 +1376,16 @@ folds with rollback; separate outer TRAIN folds evaluate outcomes.
 Only aggregate reports are returned, always stored under
 `/scratch/ylong66/pks_agent_outputs/`. Patient-level source files
 and prior frozen manifest remain private.
+
+
+## Phase46 — Real Qwen3 Doctor backbone (GPU, offline)
+
+Phase45 has no LLM; Phase46 introduces actual local Qwen3-4B-Instruct-2507 generation in a constrained Doctor tool-calling interface. The Patient evidence service and observation WM remain grounded/non-LLM. Compare `llm_plain` vs `llm_wm` against equal-question non-LLM policies on TRAIN-only simulated V04 exams. This is not yet LLM-RSI or a temporal WM. **Never use the Phase44 consumed final TEST again.**
+
+- [Complete login-node download and GPU Slurm instructions](docs/PHASE46_QWEN_DOCTOR.md)
+- Login node: `python scripts/prefetch_optional_agent_models.py --kind doctor` (downloads to `/scratch/ylong66/models/`)
+- Test: `python -m unittest tests.test_phase46_qwen_doctor -v`
+- Dusky L40S: `sbatch slurm/phase46_dusky_qwen_doctor.sbatch`
+- Nibi H100 MIG: `sbatch slurm/phase46_nibi_qwen_doctor.sbatch`
+
+No model downloads are attempted on network-isolated compute nodes.
