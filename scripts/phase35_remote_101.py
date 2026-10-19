@@ -148,7 +148,7 @@ def calculate(root,manifest,out,minimum=10):
         "train_registry":len(anchors),
         "six_remote_hands_on_items":list(SPECIAL),
         "non_six_NP3_header_count":len(other_items),
-        "R01_six_month_blank_total_rows_processed":nrows,
+        "R01_six_month_blank_total_rows_processed":safe(nrows,minimum),
         "R01_six_month_all_six_numeric_101_patients":
             safe(len(remotes_with_6_101),minimum),
         "warnings":[
