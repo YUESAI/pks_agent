@@ -1090,3 +1090,38 @@ zip -r pks_phase37_report.zip outputs/phase37_masked_site_benchmark
 ```
 
 Only upload the aggregate Phase37 ZIP. The reported CV results are exploratory and **do not validate real R01 performance**, examination costs, or clinical safety. Keep all patient-level PPMI files and manifests on the research cluster.
+
+## Phase 38 — Budgeted same-visit simulated acquisition (TRAIN only)
+
+Phase37 among 605 TRAIN V04 exams: always-zero hidden-six MAE 0.77851,
+visible-27 Ridge MAE 0.84765, but Ridge RMSE 1.34707 vs 1.69929 for
+always-zero. Hidden six sum >0 in 206/605 patients; Ridge-visible-27
+did not clearly exceed Ridge-visible-sum. Next ask whether an observed
+risk score can select whom to send for extra examination.
+
+Phase38 simulates fixed budgets 0/10/20/30/40/50/100% within each
+held-out TRAIN outer fold. Acquisition perfectly reveals the hidden
+six items from the SAME V04 visit; unselected patients retain zero.
+Compare random, visible 27-item sum, held-out Ridge-visible-sum and
+held-out Ridge-visible-27 risk ranking. A perfect-label oracle is an
+UNATTAINABLE upper bound, not a deployable policy. Report residual
+hidden-sum MAE, hidden-positive recall and paired bootstrap contrasts.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase38_budgeted_acquisition.py
+python -m unittest tests.test_phase38_budgeted_acquisition -v
+python scripts/phase38_budgeted_acquisition.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase38_budgeted_acquisition \
+  --folds 5 --seed 20261018 --bootstraps 500 --min-cell-count 10
+zip -r pks_phase38_report.zip outputs/phase38_budgeted_acquisition
+```
+
+This is an IDEALIZED same-V04 masking experiment, not real remote R01
+referral, actual onsite costs, patient safety, or prospective validation.
+No Phase23 validation/test subjects are accessed, and labels are never
+used for deployable acquisition rankings. Upload ONLY the aggregate
+Phase38 ZIP; keep patient-level files on the cluster.
