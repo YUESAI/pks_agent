@@ -1068,3 +1068,25 @@ zip -r pks_phase36_report.zip outputs/phase36_masked_site
 ```
 
 Upload only the aggregate report ZIP, not PPMI source CSVs or patient manifest. Phase36 is TRAIN-only, descriptive, and does not assert any remote-to-onsite simultaneous truth pairs. The 33-item sum check must be passed before creating any local patient-level masked benchmarking episodes.
+
+
+## Phase 37 — Train-only same-visit masked remote Motor benchmark
+
+Phase36 identified **605** frozen Prodromal TRAIN participants with a complete V04 onsite MDS-UPDRS Part III exam: all 33 item scores are numeric, and the item sum exactly equals the recorded `NP3TOT`. Among them, the six remotely unobservable items sum to zero for **399 (66.0%)**, making an always-zero hidden-score baseline essential. A separate 229 real R01 partial exams have 27 visible items, and 199 of these patients later have an eligible V04, but those are NOT same-day labels. Domain shift between R01 and V04 must be investigated before real-world application.
+
+Phase37 builds an **in-memory, TRAIN-only** supervised experiment using the 605 onsite exams. It simulates remote examination by masking six same-visit items; models only see the 27 visible items and predict the six hidden items' sum (0..24). Compare always-zero, proper-fold hidden-score mean, visible-sum ridge, and 27-visible-item ridge with inner penalty tuning and patient-level outer CV. The recorded full total and hidden sum are **labels**, never input predictors. Primary metric is hidden-sum MAE, with RMSE and nonzero-hidden AUROC secondary. No validation/test patients or future visits enter the task.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase37_masked_site_benchmark.py
+python -m unittest tests.test_phase37_masked_site_benchmark -v
+python scripts/phase37_masked_site_benchmark.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase37_masked_site_benchmark \
+  --folds 5 --seed 20261018 --bootstraps 500 --min-cell-count 10
+zip -r pks_phase37_report.zip outputs/phase37_masked_site_benchmark
+```
+
+Only upload the aggregate Phase37 ZIP. The reported CV results are exploratory and **do not validate real R01 performance**, examination costs, or clinical safety. Keep all patient-level PPMI files and manifests on the research cluster.
