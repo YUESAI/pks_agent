@@ -1160,3 +1160,36 @@ zip -r pks_phase39_report.zip outputs/phase39_domain_shift
 
 Share only aggregate Phase39 report ZIP. Never upload PPMI source data,
 patient-level longitudinal manifests, or per-subject decisions.
+
+## Phase 40 — Exact-budget remote ranking calibration (TRAIN only)
+
+Phase39 shows 229 eligible real remote R01 exams, 605 complete V04
+onsite exams and 199 patients observed at both visits. Mean visible
+27-item score is 3.459 at R01 versus 4.782 at V04 (SMD -0.271).
+V04 score cutoffs transfer poorly to R01; a nominal 20% V04 budget
+selects only 13.54% of R01, while ties inflate onsite selection.
+
+Phase40 separates score ranking from exact capacity. It selects EXACT
+top-k patient counts independently among R01 and V04 at 10/20/30/40/50%
+budgets, breaking ties using stable seed-based SHA256 order. It audits
+ties at the boundary and compares the V04 threshold transfer against
+exact R01 top-k selection. For 199 patients with both R01 and later V04,
+it computes tied Spearman rank correlation (bootstrap interval) and
+top-k overlap/switching. This is a ranking stability test, NOT proof
+that remote referrals have benefit: R01 hidden-six outcomes are unobserved.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase40_budget_calibration.py
+python -m unittest tests.test_phase40_budget_calibration -v
+python scripts/phase40_budget_calibration.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase40_budget_calibration \
+  --bootstraps 500 --seed 20261018 --min-cell-count 10
+zip -r pks_phase40_report.zip outputs/phase40_budget_calibration
+```
+
+Only send the aggregate ZIP; raw PPMI data, private SQLite, identifiers,
+individual ranks, decisions and visit scores must remain on the cluster.
