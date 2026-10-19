@@ -1125,3 +1125,38 @@ referral, actual onsite costs, patient safety, or prospective validation.
 No Phase23 validation/test subjects are accessed, and labels are never
 used for deployable acquisition rankings. Upload ONLY the aggregate
 Phase38 ZIP; keep patient-level files on the cluster.
+
+## Phase 39 — Does V04 ranking transfer to real R01 observation distributions?
+
+Phase38 shows visible-total ranking consistently beats one seeded random
+acquisition at fixed 10–50% V04 masking budgets, but the 27-item Ridge
+ranker does not materially beat visible total. Before simulating further
+Doctor policies, audit transportability: real R01 observations and
+same-visit-masked V04 observations can have different distributions.
+
+Phase39 compares the 27 visible clinical items and their sum in eligible
+R01 (six UR, 27 valid) versus eligible V04 (all 33 valid; total verified).
+It reports mean differences, descriptive standardized differences and
+two-sample KS distances. For patients present at both visits, report
+R01-to-later-V04 visible-score changes (NOT same-time clinical truth).
+Finally transfer each V04 visible-total budget cutoff to R01 unchanged
+and report the resulting selection rate and paired selection switches.
+The cutoff includes all tied scores; realized V04 selection fraction
+can be larger than nominal budget. It DOES NOT estimate R01 clinical
+benefit because R01 hidden-six outcomes are not observed.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase39_remote_domain_shift.py
+python -m unittest tests.test_phase39_remote_domain_shift -v
+python scripts/phase39_remote_domain_shift.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase39_domain_shift \
+  --bootstraps 500 --seed 20261018 --min-cell-count 10
+zip -r pks_phase39_report.zip outputs/phase39_domain_shift
+```
+
+Share only aggregate Phase39 report ZIP. Never upload PPMI source data,
+patient-level longitudinal manifests, or per-subject decisions.
