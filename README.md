@@ -1353,3 +1353,26 @@ TEST split is already consumed. The evidence ledger and final policy:
 Original aggregate report ZIPs and all subject-level data remain outside
 the public repository. Report-level percentages may disclose small cells;
 do not copy raw report ZIPs into GitHub.
+
+## Phase45: WM + Doctor/Patient Agent + RSI-lite experimental pilot
+
+**New TRAIN-only CPU runnable baseline**, with no Hugging Face model
+download, no GPU requirement and no access to consumed Phase44 TEST.
+The model is a same-visit categorical clinical-observation generator,
+not yet a disease-progressing temporal World Model. RSI-lite explores
+and verifies candidate planning/WM configurations on inner TRAIN dev
+folds with rollback; separate outer TRAIN folds evaluate outcomes.
+
+- [Design, scripts, cluster commands, offline model caching](docs/PHASE45_WM_RSI_PILOT.md)
+- Implementation: `scripts/phase45_world_model.py` and
+  `scripts/phase45_wm_rsi_agents.py`
+- Test: `tests/test_phase45_wm_rsi_agents.py`
+- Dusky CPU: `sbatch slurm/phase45_dusky_cpu.sbatch`
+- Nibi GPU fallback: `sbatch slurm/phase45_nibi_gpu_optional.sbatch`
+  (GPU remains unused by V0; CPU partition is strongly preferred)
+- Optional future model prefetch on networked login nodes:
+  `scripts/prefetch_optional_agent_models.py`
+
+Only aggregate reports are returned, always stored under
+`/scratch/ylong66/pks_agent_outputs/`. Patient-level source files
+and prior frozen manifest remain private.
