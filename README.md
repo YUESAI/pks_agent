@@ -1006,3 +1006,25 @@ zip -r pks_phase33_report.zip outputs/phase33_visit_audit
 ```
 
 Only upload the aggregated report ZIP; never upload patient IDs, scores, source CSVs or the private manifest. The audit does not validate PPMI event codes or test-retest noise.
+
+
+## Phase 34 — R01 remote Motor missing-total investigation
+
+Phase33 revealed all 322 six-month source records in PPMI TRAIN were `R01`, with 286 empty `NP3TOT`. The generated summary's `NP3_item_columns=6` is a **bug** in Phase33's report metadata (variable shadowing), since `10plus` populated item fields were recorded for those rows; Phase33 has been patched and should be rerun to validate item counts. The PPMI NUPDRS3 documentation explains that remote visits can mark five rigidity scores and postural stability as `UR` (unable to rate). Phase34 inspects these six item codes, restricted to frozen TRAIN patients and blank-total `R01`/`V04`/`V06` rows, and exports aggregate counts only.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase33_visit_audit tests.test_phase34_remote_motor -v
+python scripts/phase33_visit_audit.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase33_visit_audit_corrected
+python scripts/phase34_remote_motor.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase34_remote_motor
+zip -r pks_phase34_report.zip outputs/phase33_visit_audit_corrected outputs/phase34_remote_motor
+```
+
+Upload ONLY the aggregate zip. Do not reconstruct or replace missing NP3TOT or alter the frozen manifest based on these findings. Source documentation: https://blackfynn-ppmi2-curation.readthedocs-hosted.com/en/stable-documentation-branch/documentation_files/motor_assessments/tables/NUPDRS3.html .
