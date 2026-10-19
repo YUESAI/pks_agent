@@ -925,3 +925,18 @@ Unspecified medication state is not proof of controlled treatment.
 Large or reversing score changes may reflect measurement variability,
 regression to mean or true change; this audit alone cannot separate them.
 Window-matched measures are not guaranteed exact monthly sampling.
+
+
+## Phase 30 — Smoothing versus state transition
+
+Train-only PPMI Prodromal 12-to-24 Motor forecast, using the same 332 subjects and outer folds as Phase29. Compare 12-month persistence, 50/50 BL+12-month smoothing, outer-fit-selected convex blend, last-value Ridge and two-visit Ridge. Inspect completeness selection among all TRAIN subjects with 12-month targets. Never upload the private manifest.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m unittest tests.test_phase30_smoothing -v
+python scripts/phase30_smoothing.py --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite --report-dir ./outputs/phase30_smoothing --folds 5 --seed 20261018 --bootstraps 500
+zip -r pks_phase30_report.zip outputs/phase30_smoothing
+```
+
+Upload only aggregate Phase30 reports. Model improvement from two observations could be smoothing of measurement variability rather than disease dynamics.
