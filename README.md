@@ -1266,3 +1266,39 @@ zip -r pks_phase42_report.zip outputs/phase42_missing_followup_bounds
 
 Only share the aggregate Phase42 report ZIP. Never upload raw PPMI
 records, patient-level followup labels, decisions, or SQLite manifest.
+
+## Phase 43 — ONE-SHOT frozen validation of real R01 future-risk policy
+
+Phase42 on all 229 PPMI Prodromal TRAIN R01 patients showed exact
+20% top-k worst-case future V04 six-positive recall of 26.19%, above
+the 20.09% random-quota expectation, even if all 30 missing V04
+outcomes are adversarially assigned. Across 100 different tie seeds,
+the minimum worst-case recall was 24.71%. This is an identification
+bound, not a sampling confidence interval or causal policy benefit.
+
+STOP further tuning on TRAIN. The Phase43 validation protocol was
+precommitted in docs/phase43_frozen_validation_protocol.md BEFORE
+validation scores were accessed. It locks a simple, no-fit policy:
+R01 visible 27-item sum descending; exact 20% quota; SHA256 tie
+break with seed 20261018. Primary statistic is worst-case recall
+lower minus random expected recall among ALL eligible VAL R01 subjects,
+allowing every missing future V04 outcome to be positive or negative.
+Extra budgets (10/30/40/50%) and labeled AUROC/AP are descriptive only.
+Only frozen PPMI VAL patients are read; TEST remains unopened.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase43_locked_validation.py
+python -m unittest tests.test_phase43_locked_validation -v
+python scripts/phase43_locked_validation.py \
+  --data-root /scratch/ylong66/data/pks/data \
+  --manifest-db ./outputs/longitudinal_manifests/prodromal_motor_v0.sqlite \
+  --report-dir ./outputs/phase43_locked_validation
+zip -r pks_phase43_report.zip outputs/phase43_locked_validation
+```
+
+Upload ONLY the aggregate Phase43 report ZIP. Do NOT tune based on
+this validation result or open TEST. This remains observational risk
+stratification about later V04 scores, not evidence that an onsite
+referral at R01 benefits patients.
