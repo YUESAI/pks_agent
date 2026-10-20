@@ -1389,3 +1389,16 @@ Phase45 has no LLM; Phase46 introduces actual local Qwen3-4B-Instruct-2507 gener
 - Nibi H100 MIG: `sbatch slurm/phase46_nibi_qwen_doctor.sbatch`
 
 No model downloads are attempted on network-isolated compute nodes.
+
+## Phase46 Conda repair for old glibc compute nodes
+
+The initial Dusky Phase46 Qwen job failed on incompatible ms127
+torch / transformers versions and a safetensors pip binary linked
+to glibc 2.18. **Leave ms127 untouched.** New isolated GPU
+environment prefix is `/scratch/ylong66/conda/envs/pks_qwen46`.
+
+- [Complete conda-first installation and troubleshooting](docs/PHASE46_CONDA_GPU_FIX.md)
+- Conda environment definition: `envs/phase46_qwen_conda.yaml`
+- On login node: `bash scripts/setup_phase46_conda.sh`
+- On GPU compute job: `scripts/phase46_env_check.py --mode gpu`
+- Updated Dusky/Nibi Phase46 Slurm jobs automatically use new env.
