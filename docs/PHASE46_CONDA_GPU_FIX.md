@@ -111,3 +111,70 @@ consumed Phase44 TEST unchanged.
 Paths: code `/home/ylong66/workspace/pks_agent`; private PPMI
 `/scratch/ylong66/data/pks/data`; model weight/cache and all
 new Conda packages under `/scratch/ylong66`.
+
+
+## Update 2026-10-19: CUDA 12.1 libcurand needs GLIBC_2.27
+
+Conda installation of the first CUDA 12.1 environment succeeded, but
+on Dusky glibc 2.17 the selected `libcurand.so.10` demanded `GLIBC_2.27`.
+Consequently torch, transformers and accelerate could not import.
+THIS IS A CUDA RUNTIME binary issue, NOT safetensors at this stage.
+`CONDA_OVERRIDE_GLIBC=2.17` alone cannot guarantee compatibility of
+all NVIDIA libraries pulled by a dependency solver.
+
+### New recommended clean CUDA 11.8 Conda solution (login-node only)
+
+An independent CUDA 11.8 stack pins **libcurand=10.3.0.86** from the
+NVIDIA `cuda-11.8.0` label and PyTorch 2.5.1 with CUDA 11.8.
+Official PyTorch historical install docs publish the 2.5.1 + cu118
+combination. CUDA 11.8-era NVIDIA libraries target RHEL/CentOS 7-era
+platforms, but ALL real compatibility must still be checked on cluster.
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+# Only on NETWORKED LOGIN node (not a Slurm compute node):
+CONDA_EXE="$(conda info --base)/bin/conda" \
+    bash scripts/setup_phase46_conda_cu118.sh
+```
+
+Target: `/scratch/ylong66/conda/envs/pks_qwen46_cu118/`.
+Model remains in `/scratch/ylong66/models/Qwen--Qwen3-4B-Instruct-2507`.
+Old `ms127` and failed `pks_qwen46` environments are **not modified**.
+
+If the solver cannot satisfy the pinned 11.8 Conda stack, **stop**
+and share the solver error. Do not add the CUDA 12.1 NVIDIA channel
+or force a pip install into this environment. The next option would
+be a separately managed Apptainer container or a vendor-approved
+cluster PyTorch module, depending on actual cluster container support.
+
+### Offline GPU validation and submission
+
+Once login-node `phase46_env_check.py --mode packages` passes, launch
+ONLY ONE GPU smoke-test job on whichever cluster is available:
+
+```bash
+# Dusky L40S
+PHASE46_MAX_PATIENTS=12 PHASE46_QUESTIONS=2 \
+    sbatch slurm/phase46_dusky_qwen_doctor.sbatch
+
+# OR Nibi H100 MIG
+PHASE46_MAX_PATIENTS=12 PHASE46_QUESTIONS=2 \
+    sbatch slurm/phase46_nibi_qwen_doctor.sbatch
+```
+
+Both GPU scripts now point to `pks_qwen46_cu118` and call
+`phase46_env_check.py --mode gpu --expected-cuda 11.8`.
+No compute-node installation or model download occurs.
+
+### Diagnostic fallback if import still fails
+
+```bash
+PY=/scratch/ylong66/conda/envs/pks_qwen46_cu118/bin/python
+$PY -c 'import torch; print(torch.__version__,torch.version.cuda)'
+readelf --version-info /scratch/ylong66/conda/envs/pks_qwen46_cu118/lib/libcurand.so.10 | grep GLIBC_ | sort -Vu | tail
+```
+
+If the error names another NVIDIA `.so`, share its path and required
+`GLIBC_X.Y`. Do NOT replace `/lib64/libm.so.6` system-wide or manually
+copy libc/glibc into a Conda prefix; that risks breaking the cluster.
