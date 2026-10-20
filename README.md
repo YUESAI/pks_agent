@@ -1402,3 +1402,17 @@ environment prefix is `/scratch/ylong66/conda/envs/pks_qwen46`.
 - On login node: `bash scripts/setup_phase46_conda.sh`
 - On GPU compute job: `scripts/phase46_env_check.py --mode gpu`
 - Updated Dusky/Nibi Phase46 Slurm jobs automatically use new env.
+
+
+### Phase46 legacy glibc CUDA11.8 repair (2026-10-19)
+
+The first new CUDA12.1 environment imported neither Torch nor Transformers because its NVIDIA `libcurand.so.10` required `GLIBC_2.27` on glibc 2.17 Dusky. It is **not fixed by just overriding Conda's glibc solver variable**. We now recommend a **separate pinned NVIDIA CUDA 11.8** Conda environment on scratch, while keeping `ms127` and the failed environment untouched. [Read updated fix](docs/PHASE46_CONDA_GPU_FIX.md).
+
+From a networked login node:
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+CONDA_EXE="$(conda info --base)/bin/conda" bash scripts/setup_phase46_conda_cu118.sh
+```
+
+Only after `torch` imports correctly, submit `slurm/phase46_dusky_qwen_doctor.sbatch` or `slurm/phase46_nibi_qwen_doctor.sbatch`; both now run offline from `/scratch/ylong66/conda/envs/pks_qwen46_cu118/`.
