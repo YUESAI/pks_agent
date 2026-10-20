@@ -17,7 +17,7 @@ that cannot load on the older compute node.
 cd /home/ylong66/workspace/pks_agent
 git pull --ff-only origin feat/parkinson-data-audit
 conda --version
-bash scripts/setup_phase46_conda.sh
+CONDA_EXE="$(conda info --base)/bin/conda" bash scripts/setup_phase46_conda.sh
 ```
 
 The installer uses only Conda channels (`pytorch`, `nvidia`,
