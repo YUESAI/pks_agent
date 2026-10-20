@@ -1450,3 +1450,8 @@ Phase45–49 are basic *same-visit* observation WM baselines, **not** state-of-t
 - Compare against last value, BL score, fixed **50/50 historical smoothing**, and extrapolation.
 
 This is a TRAIN exploratory test with only ~332 complete three-visit trajectories. **Phase44 TEST was consumed** and is not used.
+
+
+## Phase50 results & Phase51 longitudinal visit capacity
+
+Phase50's three-fold OOF on 332 **TRAIN** trajectories found latent imagination WM MAE 2.91681 vs fixed BL/12m 50/50 smoothing MAE 2.90813; paired difference +0.00868 (95% bootstrap [-0.07738,+0.11848]). No demonstrated superiority or independent final evaluation. The next bottleneck is longitudinal sample coverage: [Phase50 results and Phase51 readiness audit](docs/PHASE50_RESULTS_PHASE51_READINESS.md). Train-only CPU audit: `sbatch slurm/phase51_dusky_cpu_readiness.sbatch`.
