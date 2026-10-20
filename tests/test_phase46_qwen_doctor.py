@@ -35,6 +35,9 @@ class Phase46Tests(unittest.TestCase):
   result=llm_doctor_rollout(wm,record,agent,items,2,"llm_wm")
   self.assertEqual(result["observed_count"],2)
   self.assertEqual(result["invalid_action_fallbacks"],2)
+  self.assertEqual(result["selected_items"],tuple(result["selected_items"]))
+  self.assertEqual(len(set(result["selected_items"])),2)
+  self.assertEqual(result["greedy_agreements"],2)
  def test_mode_hides_wm_when_plain(self):
   p=make_messages(["A"],{},.8,{"A":.1},"llm_plain")
   self.assertNotIn("0.8000",str(p))
