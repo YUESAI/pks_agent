@@ -26,7 +26,14 @@ class Phase51Tests(unittest.TestCase):
         stats,tables=audit_records(rows,anchors)
         self.assertEqual(stats["frozen_train_patients"],30)
         self.assertEqual(stats["primary_state_UNSPECIFIED_with_baseline"],30)
-        self.assertEqual(stats["primary_state_consecutive_visit_pairs"],58)
+        # 29 people retain BL->12m and 12m->24m (58 pairs);
+        # P0 retains BL->24m after its conflicting 12m key is excluded
+        # (one additional valid *observed-adjacent* 24-month pair).
+        self.assertEqual(stats["primary_state_consecutive_visit_pairs"],59)
+        gaps={r["consecutive_visit_month_gap"]:r["patient_pairs"]
+              for r in tables["primary_followup_gap_bins.csv"]}
+        self.assertEqual(gaps["9_to_15"],"58")
+        self.assertEqual(gaps["16_to_24"],"<10")
         self.assertEqual(stats["usable_unique_patient_month_state_exams"],89)
         joined=str(tables)
         self.assertNotIn("NONTRAIN",joined)
