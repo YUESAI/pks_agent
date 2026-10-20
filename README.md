@@ -1426,3 +1426,15 @@ The 100-patient TRAIN Phase46 q=4 run found Qwen-only recall 12/29 and AUROC 0.7
 sbatch slurm/phase47_dusky_qwen_budget.sbatch
 # or: sbatch slurm/phase47_nibi_qwen_budget.sbatch
 ```
+
+
+## Phase48 — Masked Transformer probabilistic observation WM
+
+The Phase47 results do **not** establish that Qwen-only is generally superior to WM-guided Qwen, because only a small Naive Bayes WM was used. Phase48 implements a patient-split neural masked-item Transformer ensemble, with explicit missing token vs observed score 0, class-conditional item probabilities, and estimated next-question information gain. It evaluates heldout TRAIN masked-item NLL, Brier and AUROC **before** connecting this WM to Qwen. This remains same-visit V04 observation modelling, not a disease-progression World Model.
+
+- [Methods, limits and Slurm instructions](docs/PHASE48_NEURAL_WM.md)
+- `scripts/phase48_masked_transformer_wm.py`
+- `tests/test_phase48_masked_transformer_wm.py`
+- Dusky CPU: `sbatch slurm/phase48_dusky_cpu_wm.sbatch`
+
+All results remain exploratory TRAIN analyses; the final Phase44 TEST remains consumed.
