@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 
 
-def check(mode):
+def check(mode,expected_prefix,expected_cuda):
     problems=[]
     base=Path(sys.prefix).resolve()
-    expected=Path("/scratch/ylong66/conda/envs/pks_qwen46")
+    expected=Path(expected_prefix).expanduser().resolve()
     if base!=expected:
         problems.append("Python is not in isolated pks_qwen46 environment: "+str(base))
     packages={}
@@ -31,6 +31,11 @@ def check(mode):
     print("Host:",platform.node(),"glibc:",platform.libc_ver())
     for name,version in sorted(packages.items()):
         print(name+":",version)
+    if packages.get("torch"):
+        import torch
+        print("torch.version.cuda:",torch.version.cuda)
+        if torch.version.cuda != expected_cuda:
+            problems.append("Expected torch CUDA "+expected_cuda+" but found "+str(torch.version.cuda))
     if mode=="gpu":
         if os.environ.get("HF_HUB_OFFLINE")!="1":
             problems.append("GPU run must set HF_HUB_OFFLINE=1")
@@ -60,8 +65,10 @@ def check(mode):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--mode",choices=("packages","gpu"),required=True)
+    p.add_argument("--expected-prefix",default="/scratch/ylong66/conda/envs/pks_qwen46_cu118")
+    p.add_argument("--expected-cuda",default="11.8")
     args=p.parse_args()
-    check(args.mode)
+    check(args.mode,args.expected_prefix,args.expected_cuda)
 
 
 if __name__=="__main__":main()
