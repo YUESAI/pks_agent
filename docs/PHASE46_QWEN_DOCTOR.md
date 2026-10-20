@@ -133,3 +133,58 @@ may not be clinically valid or safe; this is a research simulation.
 4. Neural temporal WM and optional VLM are further modules, not
    part of Phase46. VLM is only warranted for genuinely image-backed
    clinical observations.
+
+## Phase46 first successful Dusky GPU smoke test (2026-10-20)
+
+GPU job 330309 on Dusky L40S completed the Qwen3-4B offline pipeline
+with CUDA 11.8, glibc 2.17, torch 2.5.1, Transformers 4.51.3;
+all three synthetic tests passed. Heldout frozen TRAIN V04 sample:
+12 people (3 hidden-six positives), q=2, 48 Qwen generations.
+Source report: private `phase46_smoke_report.zip`, containing
+`phase46_dusky_330309/model_metrics.csv` and `summary.json`.
+
+| Model | Recall@20% | AUROC | Brier | Invalid LLM actions |
+|---|---:|---:|---:|---:|
+| llm_plain | 1/3 | 0.53704 | 0.22561 | 0 |
+| llm_wm | 0/3 | 0.53704 | 0.22917 | 0 |
+| static_questions | 0/3 | 0.53704 | 0.22917 | N/A |
+| dynamic_questions | 0/3 | 0.53704 | 0.22917 | N/A |
+| visible_sum_27 | 0/3 | 0.25926 | N/A | N/A |
+| wm_full_27 | 0/3 | 0.29630 | 0.32487 | N/A |
+
+These are tiny exploratory counts: selecting one patient changes recall
+by 33.3 percentage points. Do not claim Qwen beats WM, that WM hurts
+LLM, or that all methods choose the same questions. Full-27 baselines
+observe 27 scores and are not equal-budget comparators to q=2.
+
+**New aggregate behavior diagnostics** in `agent_behavior_agreement.csv`:
+first-question agreement, exact-sequence agreement, question-set
+overlap, selected top-k intersection/Jaccard for LLM-only vs LLM+WM,
+LLM+WM vs non-LLM dynamic and static WM policies. Sequences are
+processed in RAM and never exported per patient.
+These diagnostics were added AFTER job 330309, and therefore will
+only appear in subsequent reports, not the original smoke-test ZIP.
+
+## Next TRAIN-only investigation
+
+```bash
+cd /home/ylong66/workspace/pks_agent
+git pull --ff-only origin feat/parkinson-data-audit
+python -m py_compile scripts/phase46_qwen_doctor.py scripts/phase46_llm_doctor_eval.py
+python -m unittest tests.test_phase46_qwen_doctor -v
+# Select whichever GPU is available; run once with this larger TRAIN subset:
+PHASE46_MAX_PATIENTS=100 PHASE46_QUESTIONS=4 \
+    sbatch slurm/phase46_dusky_qwen_doctor.sbatch
+```
+
+To share the original tiny report, replace 330309 only if your job ID differs:
+
+```bash
+cd /scratch/ylong66/pks_agent_outputs
+zip -r phase46_smoke_report.zip phase46_dusky_330309/
+```
+
+To share a newer report, use its **actual** Slurm job number. New
+diagnostic aggregates may still reveal small counts; check them
+before sharing publicly. TRAIN-only results cannot constitute an
+independent final claim, as the original Phase44 TEST is consumed.
