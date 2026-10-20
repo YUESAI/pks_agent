@@ -109,17 +109,30 @@ class TransformersDoctor:
 
     def generate(self,messages):
         torch=self.torch
-        inputs=self.tokenizer.apply_chat_template(
-            messages,add_generation_prompt=True,
-            tokenize=True,return_tensors="pt")
-        if hasattr(inputs,"to"):
-            inputs=inputs.to(next(self.model.parameters()).device)
-        count=int(inputs.shape[-1])
+        # Explicit attention_mask is essential when pad_token == eos_token.
+        # Tokenize the rendered chat template as a batch to obtain a
+        # reliable attention mask rather than relying on token inference.
+        prompt=self.tokenizer.apply_chat_template(
+            messages,add_generation_prompt=True,tokenize=False)
+        inputs=self.tokenizer(
+            prompt,return_tensors="pt",return_attention_mask=True,
+            add_special_tokens=False)
+        device=next(self.model.parameters()).device
+        inputs={name:value.to(device) for name,value in inputs.items()}
+        count=int(inputs["input_ids"].shape[-1])
+        # Qwen's generation_config.json may contain sampling defaults.
+        # Explicitly reset them for reproducible deterministic decoding.
+        from copy import deepcopy
+        generation_config=deepcopy(self.model.generation_config)
+        generation_config.do_sample=False
+        generation_config.temperature=1.0
+        generation_config.top_p=1.0
+        generation_config.top_k=50
+        generation_config.pad_token_id=self.tokenizer.eos_token_id
         with torch.inference_mode():
             outputs=self.model.generate(
-                input_ids=inputs,max_new_tokens=self.max_new_tokens,
-                do_sample=False,pad_token_id=self.tokenizer.eos_token_id,
-                use_cache=True)
+                **inputs,max_new_tokens=self.max_new_tokens,
+                generation_config=generation_config,use_cache=True)
         self.total_prompts+=1
         tokens=outputs[0,count:]
         self.total_generated_tokens+=int(tokens.shape[-1])
