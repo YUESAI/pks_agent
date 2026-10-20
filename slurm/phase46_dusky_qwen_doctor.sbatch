@@ -23,21 +23,21 @@ export HF_HUB_DISABLE_TELEMETRY=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 REPO="/home/ylong66/workspace/pks_agent"
-PYTHON_BIN="/scratch/ylong66/conda/envs/ms127/bin/python"
+PYTHON_BIN="/scratch/ylong66/conda/envs/pks_qwen46/bin/python"
 MODEL="/scratch/ylong66/models/Qwen--Qwen3-4B-Instruct-2507"
 DATA="/scratch/ylong66/data/pks/data"
 OUT="/scratch/ylong66/pks_agent_outputs/phase46_dusky_${SLURM_JOB_ID}"
 cd "$REPO"
 export PYTHONPATH="$REPO"
 if [[ ! -x "$PYTHON_BIN" ]]; then
-  echo "ERROR: Python ms127 unavailable"; exit 127
+  echo "ERROR: isolated pks_qwen46 Python unavailable; run scripts/setup_phase46_conda.sh on login node"; exit 127
 fi
 if [[ ! -f "$MODEL/config.json" ]]; then
   echo "ERROR: Download Doctor Qwen model ON LOGIN NODE before submitting: $MODEL"; exit 2
 fi
 "$PYTHON_BIN" -m py_compile scripts/phase46_qwen_doctor.py scripts/phase46_llm_doctor_eval.py
 "$PYTHON_BIN" -m unittest tests.test_phase46_qwen_doctor -v
-"$PYTHON_BIN" -c "import torch, transformers, accelerate; print('CUDA',torch.cuda.is_available(),'transformers',transformers.__version__)"
+"$PYTHON_BIN" scripts/phase46_env_check.py --mode gpu
 "$PYTHON_BIN" scripts/phase46_llm_doctor_eval.py \
   --data-root "$DATA" \
   --manifest-db "$REPO/outputs/longitudinal_manifests/prodromal_motor_v0.sqlite" \
