@@ -10,7 +10,7 @@
 set -euo pipefail
 REPO="/home/ylong66/workspace/pks_agent"
 cd "$REPO"
-PYTHON_BIN="/scratch/ylong66/conda/envs/pks_qwen46/bin/python"
+PYTHON_BIN="/scratch/ylong66/conda/envs/pks_qwen46_cu118/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then echo "ERROR: install pks_qwen46 Conda environment on login node first"; exit 127; fi
 export PYTHONPATH="$REPO:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=8
@@ -30,7 +30,7 @@ if [[ ! -f "$MODEL/config.json" ]]; then
 fi
 "$PYTHON_BIN" -m py_compile scripts/phase46_qwen_doctor.py scripts/phase46_llm_doctor_eval.py
 "$PYTHON_BIN" -m unittest tests.test_phase46_qwen_doctor -v
-"$PYTHON_BIN" scripts/phase46_env_check.py --mode gpu
+"$PYTHON_BIN" scripts/phase46_env_check.py --mode gpu --expected-prefix /scratch/ylong66/conda/envs/pks_qwen46_cu118 --expected-cuda 11.8
 "$PYTHON_BIN" scripts/phase46_llm_doctor_eval.py \
     --data-root /scratch/ylong66/data/pks/data \
     --manifest-db "$REPO/outputs/longitudinal_manifests/prodromal_motor_v0.sqlite" \
