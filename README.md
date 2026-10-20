@@ -1465,3 +1465,8 @@ Phase50 used 3 outer folds + inner dev and actually fit each WM on ~177–178 of
 PHASE52_FOLDS=5 sbatch slurm/phase52_dusky_cpu_refit_wm.sbatch
 # Later: PHASE52_FOLDS=10 sbatch slurm/phase52_dusky_cpu_refit_wm.sbatch
 ```
+
+
+## Phase52 5-fold and 10-fold actual results (2026-10-20)
+
+The complete aggregate reports from Dusky jobs 330379/330381 confirm the full-outer-refit fix: each 5-fold WM learned from 265–266 patients, each 10-fold WM from 298–299 (total independent longitudinal TRAIN patients still 332). 5-fold latent WM MAE **2.94740**, 10-fold **2.93544**, versus 50/50 historical smoothing **2.90813**. Patient-bootstrap 95% intervals for WM minus baseline MAE both include zero; no demonstrated gain. Read [Phase52 actual results](docs/PHASE52_5FOLD_10FOLD_RESULTS.md). Prioritize [Phase51](docs/PHASE50_RESULTS_PHASE51_READINESS.md) longitudinal visit coverage rather than further CV fold inflation.
