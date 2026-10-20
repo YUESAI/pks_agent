@@ -1455,3 +1455,13 @@ This is a TRAIN exploratory test with only ~332 complete three-visit trajectorie
 ## Phase50 results & Phase51 longitudinal visit capacity
 
 Phase50's three-fold OOF on 332 **TRAIN** trajectories found latent imagination WM MAE 2.91681 vs fixed BL/12m 50/50 smoothing MAE 2.90813; paired difference +0.00868 (95% bootstrap [-0.07738,+0.11848]). No demonstrated superiority or independent final evaluation. The next bottleneck is longitudinal sample coverage: [Phase50 results and Phase51 readiness audit](docs/PHASE50_RESULTS_PHASE51_READINESS.md). Train-only CPU audit: `sbatch slurm/phase51_dusky_cpu_readiness.sbatch`.
+
+
+## Phase52 — 5-fold/10-fold full outer-refit longitudinal WM
+
+Phase50 used 3 outer folds + inner dev and actually fit each WM on ~177–178 of 332 longitudinal TRAIN patients. Phase52 fixes the underuse of training records: select epoch counts on nested inner dev, then restart and refit each model on the **full outer-training cohort**. Default 5-fold runs use ~265–266 patients for weight fitting; 10-fold sensitivity uses ~298–299. These changes do NOT expand the number of independent patients or unlock the consumed final Test. [Protocol](docs/PHASE52_FULL_OUTER_REFIT_WM.md).
+
+```bash
+PHASE52_FOLDS=5 sbatch slurm/phase52_dusky_cpu_refit_wm.sbatch
+# Later: PHASE52_FOLDS=10 sbatch slurm/phase52_dusky_cpu_refit_wm.sbatch
+```
