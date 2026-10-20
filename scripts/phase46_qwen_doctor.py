@@ -139,7 +139,7 @@ class TransformersDoctor:
         return self.tokenizer.decode(tokens,skip_special_tokens=True)
 
 
-def llm_doctor_rollout(world,row,backend,items,questions,mode):
+def llm_doctor_rollout(world,row,backend,items,questions,mode,checkpoints=()):
     """Doctor -> measured tool -> World Model belief update, strictly q steps.
 
     Never pass hidden outcome to the LLM. An invalid request is counted
@@ -147,7 +147,11 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
     """
     if not 1<=questions<=len(items):
         raise ValueError("Invalid question budget")
+    marks=tuple(sorted(set(checkpoints)))
+    if any(not isinstance(q,int) or not 1<=q<=questions for q in marks):
+        raise ValueError("Checkpoints must be within the question budget")
     evidence=PatientEvidenceService(row["features"],items,questions)
+    snapshots={}
     invalid=0
     requested=0
     selected_items=[]
@@ -169,6 +173,8 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
         selected_items.append(chosen)
         # Only measured evidence is returned; model output cannot write scores.
         reply=evidence.request(chosen)
+        if (step+1) in marks:
+            snapshots[step+1]=world.posterior(evidence.observed)
         if reply["provenance"]!="observed_V04_masking_simulation":
             raise AssertionError("Ungrounded tool result")
     return {
@@ -180,4 +186,5 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
         # Do not export individual question sequences or patient IDs.
         "selected_items":tuple(selected_items),
         "greedy_agreements":greedy_agreements,
+        "risk_at_checkpoints":snapshots,
     }
