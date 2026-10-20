@@ -1438,3 +1438,15 @@ The Phase47 results do **not** establish that Qwen-only is generally superior to
 - Dusky CPU: `sbatch slurm/phase48_dusky_cpu_wm.sbatch`
 
 All results remain exploratory TRAIN analyses; the final Phase44 TEST remains consumed.
+
+## Phase50 — Dreamer-style longitudinal latent clinical World Model (2026 direction)
+
+Phase45–49 are basic *same-visit* observation WM baselines, **not** state-of-the-art clinical world models. We now prioritize [Dreamer-style latent dynamics + clinical JEPA](docs/PHASE50_DREAMER_CLINICAL_JEPA_PIVOT.md): a time-conditioned latent clinical state, an observation update from recorded Motor visits, JEPA-like latent prediction, and model-only imagined future rollout. The first Phase50 baseline uses strictly frozen PPMI TRAIN BL→12m→24m trajectories. It **does not** reuse actual Dreamer4/video pretrained weights or infer treatment causality from clinical observational data.
+
+- Code: `scripts/phase50_clinical_latent_wm.py`
+- Tests: `tests/test_phase50_clinical_latent_wm.py`
+- CPU Slurm: `sbatch slurm/phase50_dusky_cpu_wm.sbatch`
+- Outputs: `/scratch/ylong66/pks_agent_outputs/phase50_cpu_<jobid>/`
+- Compare against last value, BL score, fixed **50/50 historical smoothing**, and extrapolation.
+
+This is a TRAIN exploratory test with only ~332 complete three-visit trajectories. **Phase44 TEST was consumed** and is not used.
