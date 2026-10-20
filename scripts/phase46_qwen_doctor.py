@@ -150,6 +150,8 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
     evidence=PatientEvidenceService(row["features"],items,questions)
     invalid=0
     requested=0
+    selected_items=[]
+    greedy_agreements=0
     for step in range(questions):
         remaining=[k for k in items if k not in evidence.observed]
         gains={k:world.information_gain(evidence.observed,k)
@@ -159,9 +161,12 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
             make_messages(remaining,evidence.observed,risk,gains,mode))
         requested+=1
         chosen=extract_action(response,set(remaining))
+        greedy=sorted(remaining,key=lambda k:(-gains[k],k))[0]
         if chosen is None:
             invalid+=1
-            chosen=sorted(remaining,key=lambda k:(-gains[k],k))[0]
+            chosen=greedy
+        greedy_agreements+=int(chosen==greedy)
+        selected_items.append(chosen)
         # Only measured evidence is returned; model output cannot write scores.
         reply=evidence.request(chosen)
         if reply["provenance"]!="observed_V04_masking_simulation":
@@ -171,4 +176,8 @@ def llm_doctor_rollout(world,row,backend,items,questions,mode):
         "queries":requested,
         "invalid_action_fallbacks":invalid,
         "observed_count":len(evidence.observed),
+        # Used only to compute aggregate behavior diagnostics in memory.
+        # Do not export individual question sequences or patient IDs.
+        "selected_items":tuple(selected_items),
+        "greedy_agreements":greedy_agreements,
     }
