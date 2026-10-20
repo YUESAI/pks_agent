@@ -35,6 +35,7 @@ def split_sample(rows,seed,limit):
 def evaluate(rows,items,backend,questions,seed):
     predicted={m:{} for m in MODES}
     invalid=Counter();calls=Counter()
+    paths={m:{} for m in MODES if m not in ("visible_sum_27","wm_full_27")}
     for row in rows:
         pid=row["pid"]
         for mode in MODES:
@@ -44,17 +45,19 @@ def evaluate(rows,items,backend,questions,seed):
                 predicted[mode][pid]=result["risk"]
                 invalid[mode]+=result["invalid_action_fallbacks"]
                 calls[mode]+=result["queries"]
+                paths[mode][pid]=result["selected_items"]
             elif mode in ("static_questions","dynamic_questions"):
                 p=PatientEvidenceService(row["features"],items,questions)
                 risk,n=query_policy(backend.world,p,
                     "static" if mode.startswith("static") else "dynamic",
                     questions,pid,seed)
                 predicted[mode][pid]=risk
+                paths[mode][pid]=tuple(p.observed)
             elif mode=="visible_sum_27":
                 predicted[mode][pid]=sum(row["features"].values())
             else:
                 predicted[mode][pid]=backend.world.posterior(row["features"])
-    return predicted,invalid,calls
+    return predicted,invalid,calls,paths
 
 
 def run(root,manifest,out,model_dir,questions=4,limit=36,
@@ -79,7 +82,7 @@ def run(root,manifest,out,model_dir,questions=4,limit=36,
     world=ObservationWorldModel(items).fit(fitting)
     doctor=TransformersDoctor(model_dir,max_new_tokens=max_new_tokens)
     doctor.world=world
-    predictions,invalid,calls=evaluate(holdout,items,doctor,questions,seed)
+    predictions,invalid,calls,paths=evaluate(holdout,items,doctor,questions,seed)
     metrics=[]
     for mode in MODES:
         st=measure(holdout,predictions[mode],seed,
@@ -99,7 +102,36 @@ def run(root,manifest,out,model_dir,questions=4,limit=36,
             "invalid_llm_action_count":invalid[mode],
             "actual_llm_generations":calls[mode],
         })
+    # Never serialize any individual patient's actions, identifiers or scores.
+    diagnostic=[]
+    for left,right in (
+        ("llm_plain","llm_wm"),
+        ("llm_plain","dynamic_questions"),
+        ("llm_wm","dynamic_questions"),
+        ("llm_wm","static_questions"),
+        ("static_questions","dynamic_questions"),
+    ):
+        n=len(holdout)
+        exact=sum(paths[left][r["pid"]]==paths[right][r["pid"]] for r in holdout)
+        first=sum(paths[left][r["pid"]][0]==paths[right][r["pid"]][0] for r in holdout)
+        overlap=sum(len(set(paths[left][r["pid"]]) & set(paths[right][r["pid"]])) /
+                    questions for r in holdout)
+        chosen_left=measure(holdout,predictions[left],seed,True)["chosen"]
+        chosen_right=measure(holdout,predictions[right],seed,True)["chosen"]
+        inter=len(chosen_left & chosen_right)
+        union=len(chosen_left | chosen_right)
+        diagnostic.append({
+            "controller_a":left,"controller_b":right,
+            "patients":n,"first_question_agreement_pct":round(100*first/n,2),
+            "full_sequence_agreement_pct":round(100*exact/n,2),
+            "question_set_overlap_pct":round(100*overlap/n,2),
+            "topk_selected_overlap_n":inter,
+            "topk_selected_jaccard":round(inter/union,5) if union else "",
+        })
     out.mkdir(parents=True,exist_ok=True)
+    with (out/"agent_behavior_agreement.csv").open("w",newline="") as f:
+        w=csv.DictWriter(f,fieldnames=list(diagnostic[0]))
+        w.writeheader();w.writerows(diagnostic)
     with (out/"model_metrics.csv").open("w",newline="") as f:
         w=csv.DictWriter(f,fieldnames=list(metrics[0]))
         w.writeheader();w.writerows(metrics)
@@ -115,6 +147,7 @@ def run(root,manifest,out,model_dir,questions=4,limit=36,
         "site_acquisition_budget_pct":20,
         "llm_model_generations":doctor.total_prompts,
         "llm_total_generated_tokens":doctor.total_generated_tokens,
+        "behavior_diagnostics":"agent_behavior_agreement.csv (aggregate, no patient identifiers)",
         "seed":seed,
         "limits":[
             "Doctor uses an actual local Qwen LLM; Patient and verifier are deterministic.",
