@@ -23,7 +23,7 @@ export HF_HUB_DISABLE_TELEMETRY=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 REPO="/home/ylong66/workspace/pks_agent"
-PYTHON_BIN="/scratch/ylong66/conda/envs/pks_qwen46/bin/python"
+PYTHON_BIN="/scratch/ylong66/conda/envs/pks_qwen46_cu118/bin/python"
 MODEL="/scratch/ylong66/models/Qwen--Qwen3-4B-Instruct-2507"
 DATA="/scratch/ylong66/data/pks/data"
 OUT="/scratch/ylong66/pks_agent_outputs/phase46_dusky_${SLURM_JOB_ID}"
@@ -37,7 +37,7 @@ if [[ ! -f "$MODEL/config.json" ]]; then
 fi
 "$PYTHON_BIN" -m py_compile scripts/phase46_qwen_doctor.py scripts/phase46_llm_doctor_eval.py
 "$PYTHON_BIN" -m unittest tests.test_phase46_qwen_doctor -v
-"$PYTHON_BIN" scripts/phase46_env_check.py --mode gpu
+"$PYTHON_BIN" scripts/phase46_env_check.py --mode gpu --expected-prefix /scratch/ylong66/conda/envs/pks_qwen46_cu118 --expected-cuda 11.8
 "$PYTHON_BIN" scripts/phase46_llm_doctor_eval.py \
   --data-root "$DATA" \
   --manifest-db "$REPO/outputs/longitudinal_manifests/prodromal_motor_v0.sqlite" \
