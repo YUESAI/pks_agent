@@ -1416,3 +1416,13 @@ CONDA_EXE="$(conda info --base)/bin/conda" bash scripts/setup_phase46_conda_cu11
 ```
 
 Only after `torch` imports correctly, submit `slurm/phase46_dusky_qwen_doctor.sbatch` or `slurm/phase46_nibi_qwen_doctor.sbatch`; both now run offline from `/scratch/ylong66/conda/envs/pks_qwen46_cu118/`.
+
+
+## Phase47: Qwen Doctor 4/8/12/16 query-budget curve
+
+The 100-patient TRAIN Phase46 q=4 run found Qwen-only recall 12/29 and AUROC 0.7438, versus WM-guided Qwen 10/29 and AUROC 0.6486. WM-guided Qwen and static/dynamic WM selected the same 20 patients, highlighting the need to test longer sequences and actual adaptive behavior. The [Phase47 protocol](docs/PHASE47_QUERY_BUDGET_CURVES.md) records one Qwen rollout to q=16 and aggregate risk/cost snapshots at q=4/8/12/16, with no further model downloads or use of consumed TEST.
+
+```bash
+sbatch slurm/phase47_dusky_qwen_budget.sbatch
+# or: sbatch slurm/phase47_nibi_qwen_budget.sbatch
+```
