@@ -58,17 +58,44 @@ class Phase54Tests(unittest.TestCase):
         self.assertTrue(any(p.grad is not None for p in wm.parameters()))
     def test_future_value_does_not_enter_its_own_prediction(self):
         torch.set_num_threads(2)
+        torch.manual_seed(54)
         rows=synthetic(2)
         x,s,m,v=patient_batch(rows,torch.device("cpu"))
         model=MaskedMotorWM(width=16).eval()
+        # Synthetic R01 at visit index 1 has status=2 for items 0..5
+        # (unrateable) and status=1 for items 6..32 (actually measured).
+        self.assertTrue(torch.all(s[:,1,0]==2).item())
+        self.assertTrue(torch.all(s[:,1,6]==1).item())
         with torch.no_grad():
             first=model(x,s,m,v)
-            changed=x.clone()
-            changed[:,1,0]=(changed[:,1,0]+3)%5
-            second=model(changed,s,m,v)
-        self.assertTrue(torch.equal(first[:,0],second[:,0]))
-        # Later beliefs should be allowed to depend on the measured score.
-        self.assertFalse(torch.equal(first[:,1],second[:,1]))
+            # Changing a 101/UR placeholder MUST NEVER affect belief
+            # or predictions, including subsequent visits.
+            unobserved=x.clone()
+            unobserved[:,1,0]=(unobserved[:,1,0]+3)%5
+            invisible_change=model(unobserved,s,m,v)
+            # Changing a genuinely observed prior visit's score may
+            # update belief and therefore alter subsequent forecasts.
+            observed=x.clone()
+            observed[:,1,6]=(observed[:,1,6]+3)%5
+            measured_change=model(observed,s,m,v)
+        self.assertTrue(torch.equal(first,invisible_change))
+        # At visit 1, prediction occurs before incorporating its data.
+        self.assertTrue(torch.equal(first[:,0],measured_change[:,0]))
+        # At visit 2+, updated belief is allowed to reflect known visit 1.
+        self.assertGreater(
+            float((first[:,1:]-measured_change[:,1:]).abs().max()),1e-8)
+
+    def test_unobserved_future_status_cannot_leak_into_current_forecast(self):
+        torch.set_num_threads(2)
+        torch.manual_seed(55)
+        x,s,m,v=patient_batch(synthetic(2),torch.device("cpu"))
+        model=MaskedMotorWM(width=16).eval()
+        modified_status=s.clone()
+        modified_status[:,1,6]=0
+        with torch.no_grad():
+            baseline=model(x,s,m,v)
+            modified=model(x,modified_status,m,v)
+        self.assertTrue(torch.equal(baseline[:,0],modified[:,0]))
     def test_nested_cv_and_reports(self):
         torch.set_num_threads(2)
         rows=synthetic()
