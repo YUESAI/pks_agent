@@ -29,11 +29,13 @@ def sequences_from_rows(rows,anchors):
         statuses=tuple(1 if values[k][0]=="valid" else
                        2 if values[k][0]=="unable" else 0 for k in ITEMS)
         scores=tuple(values[k][1] if values[k][0]=="valid" else 0 for k in ITEMS)
-        entry={"month":month,"event":event,"score":scores,"status":statuses}
+        entry={"month":month,"event":event,"score":scores,"status":statuses,
+               "documented_total":total(row.get("NP3TOT",""))}
         grouped[(pid,month)].append(entry)
     unique=defaultdict(dict)
     for (pid,month),candidates in grouped.items():
-        identity={(r["event"],r["score"],r["status"]) for r in candidates}
+        identity={(r["event"],r["score"],r["status"],
+                   r["documented_total"]) for r in candidates}
         if len(identity)!=1:
             qc["conflicting_patient_month_keys"]+=1
             continue
@@ -50,7 +52,7 @@ def sequences_from_rows(rows,anchors):
     meta={"frozen_train_patients":len(anchors),"anchored_patients":anchored,
           "patients_with_2plus_visits":len(result),
           "anchored_transition_pairs":total_pairs,
-          "qc":dict(qc)}
+          "qc":{k:(v if v>=10 else "<10") for k,v in sorted(qc.items())}}
     if not result:raise ValueError("No eligible sequences")
     return result,meta
 
