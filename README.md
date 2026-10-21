@@ -1501,3 +1501,12 @@ replication. See [Phase54 experiment and commands](docs/PHASE54_MASKED_LONGITUDI
 ```bash
 sbatch slurm/phase54_dusky_cpu_masked_wm.sbatch
 ```
+
+
+## Phase54 verified result and Phase55 stronger transition control
+
+In the actual 658-patient TRAIN-only 5-fold Phase54 report, masked temporal WM patient-average next-observed-item NLL was **0.413298**, against fit-TRAIN item marginal **0.448684**, and an arbitrarily confident .85 item-persistence model **0.669542**. The WM vs fixed-persistence paired patient-bootstrap contrast was -0.256243 (95% [-0.269142, -0.242533]); this is **not** independent final validation. Phase55 adds an **inner-dev tuned Dirichlet item-wise Markov transition** (with optional time-gap conditioning), and patient-paired bootstrap comparisons against both the marginal and tuned Markov references. [Phase54 report and Phase55 protocol](docs/PHASE54_RESULTS_PHASE55_MARKOV_CONTROLS.md).
+
+```bash
+sbatch slurm/phase55_dusky_markov_controls.sbatch
+```
