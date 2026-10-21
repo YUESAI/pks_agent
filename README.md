@@ -1470,3 +1470,10 @@ PHASE52_FOLDS=5 sbatch slurm/phase52_dusky_cpu_refit_wm.sbatch
 ## Phase52 5-fold and 10-fold actual results (2026-10-20)
 
 The complete aggregate reports from Dusky jobs 330379/330381 confirm the full-outer-refit fix: each 5-fold WM learned from 265–266 patients, each 10-fold WM from 298–299 (total independent longitudinal TRAIN patients still 332). 5-fold latent WM MAE **2.94740**, 10-fold **2.93544**, versus 50/50 historical smoothing **2.90813**. Patient-bootstrap 95% intervals for WM minus baseline MAE both include zero; no demonstrated gain. Read [Phase52 actual results](docs/PHASE52_5FOLD_10FOLD_RESULTS.md). Prioritize [Phase51](docs/PHASE50_RESULTS_PHASE51_READINESS.md) longitudinal visit coverage rather than further CV fold inflation.
+
+
+## Phase51 actual results and Phase53 mask-aware follow-up
+
+Phase51 job 330387 audited frozen Prodromal TRAIN motor totals: 1,312 patients; 1,149 with strict BL Motor totals, **647 with ≥2 total-score visits**, **375 with ≥3**, **120 with ≥4**, and **17 with ≥5**. The 1,189 adjacent UNSPECIFIED visit pairs are not independent patients and include sequences without verified BL. Remote R01 visits often lack NP3TOT *because* six hands-on scores are 101/UR, despite 27 real visible items, so purely total-score audits undercount relevant partially observed episodes. [Verified Phase51 evidence and Phase53 protocol](docs/PHASE51_RESULTS_PHASE53_MASK_AUDIT.md).
+
+Phase53 examines explicit 33-item validity masks and real R01 structural unobservability, with patient-month conflict exclusion and aggregate-only reports. On Dusky CPU: `sbatch slurm/phase53_dusky_cpu_mask_audit.sbatch`. Data remain TRAIN-only; original final TEST is consumed.
