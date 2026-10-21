@@ -12,6 +12,7 @@ from statistics import mean
 import torch
 from scripts.phase54_masked_sequences import load_train
 from scripts.phase54_temporal_wm import MaskedMotorWM,patient_batch,observed_nll,forecast
+from scripts.phase55_markov_baseline import ItemMarkov,choose_markov
 
 def hashed(seed,key):
     return hashlib.sha256(f"phase54|{seed}|{key}".encode()).hexdigest()
@@ -109,8 +110,8 @@ def run(data,out,folds=5,width=64,max_epochs=25,seed=20261018,device_name="cpu")
     device=torch.device(device_name)
     if device.type=="cpu":torch.set_num_threads(min(4,torch.get_num_threads()))
     assignment=split_patients(data,folds,seed)
-    results={name:[] for name in ("neural_wm","last_observed","train_marginal")}
-    sizes=[];epoch_records=[]
+    results={name:[] for name in ("neural_wm","last_observed","train_marginal","tuned_item_markov")}
+    sizes=[];epoch_records=[];markov_choices=[]
     for fold in range(folds):
         outer=[p for p in data if assignment[p["pid"]]!=fold]
         held=[p for p in data if assignment[p["pid"]]==fold]
@@ -130,6 +131,16 @@ def run(data,out,folds=5,width=64,max_epochs=25,seed=20261018,device_name="cpu")
         fitted=train_model(outer,width,best_epoch,seed+fold*103,device)
         priors=baselines(outer)
         fold_result=evaluate_rows(held,fitted,priors,device)
+        markov_choice=choose_markov(inner,dev)
+        markov=ItemMarkov(markov_choice["selected_alpha"],
+                          markov_choice["selected_gap_mode"]).fit(outer)
+        patient_markov=markov.score_patients(held)
+        fold_result["tuned_item_markov"]=[
+            patient_markov[person["pid"]] for person in held]
+        markov_choices.append({
+            "fold":fold,"outer_fit_patients":len(outer),
+            "inner_fit_patients":len(inner),"inner_dev_patients":len(dev),
+            **markov_choice})
         for name in results:results[name].extend(fold_result[name])
         sizes.append({"fold":fold,"outer_fit_n":len(outer),
                       "inner_epoch_selection_fit_n":len(inner),
@@ -142,13 +153,21 @@ def run(data,out,folds=5,width=64,max_epochs=25,seed=20261018,device_name="cpu")
     metrics=[{"method":k,"patients":len(values),
               "mean_patient_next_visit_item_nll":round(mean(values),6)}
              for k,values in results.items()]
-    contrast=[a-b for a,b in zip(results["neural_wm"],results["last_observed"])]
     rng=random.Random(seed+77)
-    draws=sorted(mean(contrast[rng.randrange(len(contrast))]
-                      for i in contrast) for _ in range(400))
-    def percentile(q):
-        x=q*(len(draws)-1);i=int(x);j=min(i+1,len(draws)-1)
-        return draws[i]*(j-x)+draws[j]*(x-i)
+    contrasts=[]
+    for comparator in ("last_observed","train_marginal","tuned_item_markov"):
+        difference=[a-b for a,b in zip(results["neural_wm"],results[comparator])]
+        draws=sorted(mean(difference[rng.randrange(len(difference))]
+                         for _ in difference) for _ in range(400))
+        def percentile(q):
+            x=q*(len(draws)-1);i=int(x);j=min(i+1,len(draws)-1)
+            return draws[i]*(j-x)+draws[j]*(x-i)
+        contrasts.append({
+            "comparison":"neural_wm_minus_"+comparator,
+            "delta_patient_mean_nll":round(mean(difference),6),
+            "bootstrap_ci95_low":round(percentile(.025),6),
+            "bootstrap_ci95_high":round(percentile(.975),6),
+            "bootstrap_reps":400})
     out=Path(out).expanduser().resolve();out.mkdir(parents=True,exist_ok=True)
     def write(name,rows):
         with (out/name).open("w",newline="") as f:
@@ -156,19 +175,17 @@ def run(data,out,folds=5,width=64,max_epochs=25,seed=20261018,device_name="cpu")
             w.writeheader();w.writerows(rows)
     write("patient_oof_item_nll.csv",metrics)
     write("fold_training_sizes.csv",sizes)
-    write("paired_nll_contrast.csv",[{
-        "comparison":"neural_wm_minus_last_observed",
-        "delta_patient_mean_nll":round(mean(contrast),6),
-        "bootstrap_ci95_low":round(percentile(.025),6),
-        "bootstrap_ci95_high":round(percentile(.975),6),
-        "bootstrap_reps":400}])
+    write("fold_markov_selections.csv",markov_choices)
+    write("paired_nll_contrast.csv",contrasts)
     summary={"status":"TRAIN_only_irregular_time_masked_item_temporal_wm",
              "patient_trajectories":len(data),"outer_folds":folds,
              "inner_epoch_selection":candidates,
+             "additional_controls":"TRAIN-fit tuned Markov and matched patient bootstrap against marginal",
              "selected_epochs":epoch_records,"width":width,
              "evaluation":"retrospective time-conditioned next observed visit",
              "constraints":[
                  "No real prospective appointment forecasting: target visit time gap is given.",
+                 "Markov transition prior and smoothing selected ONLY on inner development; refitted on outer TRAIN.",
                  "Only recorded score items contribute to next-visit scoring.",
                  "The complete measured visit is used for belief update after it is scored.",
                  "No patient rows, identifiers or individual losses exported.",
