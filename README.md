@@ -1510,3 +1510,8 @@ In the actual 658-patient TRAIN-only 5-fold Phase54 report, masked temporal WM p
 ```bash
 sbatch slurm/phase55_dusky_markov_controls.sbatch
 ```
+
+
+## Phase55 actual results (2026-10-21)
+
+The completed 658-patient **TRAIN-only** 5-fold experiment found **tuned item Markov NLL 0.410580** versus **masked temporal WM 0.413298**, item marginal 0.448684, fixed persistence 0.669542. WM minus tuned Markov patient-paired delta **+0.002718**, bootstrap 95% **[-0.002875, +0.008620]**: no demonstrated advantage over a tuned temporal statistical baseline. Markov selected *pooled* (non-time-binned) transitions in all five folds. See [Phase55 actual metrics and next research gates](docs/PHASE55_ACTUAL_RESULTS_DECISION.md). Focus subsequent experiments on cross-item prediction, R01→V04 masked-to-onsite forecasting, and true open-loop multiple-visit prediction rather than scaling the neural WM on the same single-step endpoint. Consumed Phase44 TEST remains untouched.
