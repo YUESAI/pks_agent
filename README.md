@@ -1482,3 +1482,22 @@ Phase53 examines explicit 33-item validity masks and real R01 structural unobser
 ## Phase53 actual mask-aware longitudinal capacity (Oct 21, 2026)
 
 The real TRAIN-only Phase53 audit on Dusky job 330498 found **2,702** usable complete/partial Motor episodes among frozen Prodromal TRAIN, **1,165** BL-anchored patients, **658** people with ≥2 visits, **426** with ≥3, **272** with ≥4 and **98** with ≥5. It counted **1,490** anchored adjacent episode pairs (NOT independent patients). These include **286** genuine 27-visible/six-unrateable episodes over all event types, with **229** corresponding to R01; missing/101 hands-on values remain unknown, not zero. Phase53's strict masked R01+later full V04 cohort contains **197** patients versus **199** in earlier locked R01 cohorts; reconcile definitions before comparisons, without reopening consumed final TEST. See [actual Phase53 report analysis and Phase54 masked longitudinal protocol](docs/PHASE53_RESULTS_PHASE54_MASKED_LONGITUDINAL_PROTOCOL.md). Phase54 is a **research protocol**, not an implemented or validated neural model yet.
+
+
+## Phase54: real masked longitudinal Motor World Model (code available)
+
+Uses frozen TRAIN patient sequences with 33 actual score items,
+missingness/101-UR tokens and irregular visit intervals. An
+observation-conditioned recurrent latent WM predicts the next
+observed visit's five-level score distributions. Primary comparison
+is patient-level OOF next-visit categorical NLL versus last-known
+item persistence and TRAIN marginal distribution. Five outer folds
+with inner epoch selection and full outer refit; only aggregate
+reports are exported. Test/VAL are not accessed. This is a
+**retrospective time-conditioned** pilot (the target visit interval
+is supplied), not clinical intervention simulation or Dreamer4
+replication. See [Phase54 experiment and commands](docs/PHASE54_MASKED_LONGITUDINAL_WM.md).
+
+```bash
+sbatch slurm/phase54_dusky_cpu_masked_wm.sbatch
+```
