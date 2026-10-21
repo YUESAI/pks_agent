@@ -56,6 +56,19 @@ class Phase54Tests(unittest.TestCase):
         self.assertTrue(torch.isfinite(loss))
         loss.backward()
         self.assertTrue(any(p.grad is not None for p in wm.parameters()))
+    def test_future_value_does_not_enter_its_own_prediction(self):
+        torch.set_num_threads(2)
+        rows=synthetic(2)
+        x,s,m,v=patient_batch(rows,torch.device("cpu"))
+        model=MaskedMotorWM(width=16).eval()
+        with torch.no_grad():
+            first=model(x,s,m,v)
+            changed=x.clone()
+            changed[:,1,0]=(changed[:,1,0]+3)%5
+            second=model(changed,s,m,v)
+        self.assertTrue(torch.equal(first[:,0],second[:,0]))
+        # Later beliefs should be allowed to depend on the measured score.
+        self.assertFalse(torch.equal(first[:,1],second[:,1]))
     def test_nested_cv_and_reports(self):
         torch.set_num_threads(2)
         rows=synthetic()
