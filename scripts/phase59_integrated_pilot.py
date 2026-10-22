@@ -101,6 +101,7 @@ def main():
     p.add_argument("--questions",type=int,default=4)
     p.add_argument("--max-patients",type=int,default=24)
     p.add_argument("--max-new-tokens",type=int,default=48)
+    p.add_argument("--doctor-device",choices=("cpu","cuda"),default="cuda")
     p.add_argument("--temporal-epochs",type=int,default=8)
     p.add_argument("--rsi-rounds",type=int,default=3)
     options=p.parse_args()
@@ -117,7 +118,7 @@ def main():
         raise ValueError("Need >=2 neural temporal fit epochs")
     rows,items,qc,source=load_train(root,manifest)
     fit,dev,evaluation=split(rows,options.max_patients)
-    backend=TransformersDoctor(model_dir,options.max_new_tokens)
+    backend=TransformersDoctor(model_dir,options.max_new_tokens,device=options.doctor_device)
     start=time.perf_counter()
     priors={}
     temporal={}
@@ -141,6 +142,7 @@ def main():
        "status":"Phase59_integrated_grounded_Qwen_temporal_WM_RSI_engineering_pilot",
        "arm":options.arm,
        "model_backbone":"Qwen3-4B-Instruct-2507",
+       "doctor_inference_device":options.doctor_device,
        "model_local_directory":str(model_dir),
        "patient_split_protocol":"frozen_TRAIN_hash_65pct_fit_15pct_dev_20pct_eval",
        "seed":SEED,
