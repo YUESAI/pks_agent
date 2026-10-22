@@ -1530,3 +1530,8 @@ Implemented a five-fold *matched* 10-policy comparison including R01 visible sco
 PHASE58_EPOCHS=2 PHASE58_BOOTSTRAP=100 sbatch slurm/phase58_dusky_ten_strategy.sbatch
 # After smoke succeeds: sbatch slurm/phase58_dusky_ten_strategy.sbatch
 ```
+
+
+## Phase59–62: integrated VERA-PD WM × Qwen Doctor × verifier-guided RSI
+
+The [immutable cumulative Phase23–58 research ledger](docs/EXPERIMENT_LEDGER_PHASE23_58.md) now separates same-V04 masking simulation, genuine earlier R01→later V04 forecasting, and masked longitudinal next-visit prediction, and preserves the consumed Phase44 final TEST warning. The [Phase59–62 engineering and controlled experiment roadmap](docs/ROADMAP_PHASE59_62_VERA_PD_INTEGRATION.md) defines a split-safe two-head observation/temporal WM, real-grounded patient tool, existing offline Qwen3-4B Doctor, multi-step imagination, versioned inner-verifier RSI with rollback, and independent external validation. Phase59 code is **planned, not yet implemented**; do not submit imaginary new jobs. Existing Conda and Qwen weights are reused.
