@@ -1520,3 +1520,13 @@ The completed 658-patient **TRAIN-only** 5-fold experiment found **tuned item Ma
 ## Phase56 actual results and Phase57 R01 clinical ranking baseline
 
 [Phase56 report and Phase57 protocol](docs/PHASE56_ACTUAL_RESULTS_PHASE57_BASELINE.md): in 197 frozen TRAIN real R01→later V04 cases (57 later hidden-six positives), the temporal latent WM had NLL 0.315892, AUROC 0.679261 and captured 19/57 positives at a 39-person 20% onsite quota; tuned Markov NLL 0.314551, AUROC 0.650940, captured 23/57. WM vs Markov patient-paired NLL difference +0.001341, CI [-0.024964,+0.025792]. No demonstrated WM gain versus strong Markov. Phase57 adds the missing frozen R01 visible-27 item sum on precisely the Phase56 eligible cohort (no extra model training): `sbatch slurm/phase57_dusky_cpu_visible27.sbatch`. These remain repeatedly explored TRAIN results, not independent confirmation.
+
+
+## Phase58: ten fixed policies, same 197 real R01→V04 TRAIN patients
+
+Implemented a five-fold *matched* 10-policy comparison including R01 visible score sum/nonzero, ridge/logistic/Naive Bayes, tuned item Markov, two masked temporal WM widths (64/128), and two fixed WM mixtures. All selection uses exactly 20% onsite quota, with identical patient-level bootstrap indices and deterministic tie-breaking. Report actual fit/heldout patients, selected epochs, WM parameter count and per-fold training seconds. **Exploratory frozen TRAIN only**, no use of original consumed final TEST; neither Qwen Doctor nor LLM-driven RSI is claimed in this phase. [Code, baseline definitions, Slurm instructions](docs/PHASE58_TEN_STRATEGY_EXPERIMENT.md).
+
+```bash
+PHASE58_EPOCHS=2 PHASE58_BOOTSTRAP=100 sbatch slurm/phase58_dusky_ten_strategy.sbatch
+# After smoke succeeds: sbatch slurm/phase58_dusky_ten_strategy.sbatch
+```
