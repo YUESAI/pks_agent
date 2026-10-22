@@ -82,7 +82,7 @@ def execute(rows,items,mode,backend,questions,limit,
     metadata={"train_site_fit_patients":len(fit),
               "inner_verifier_dev_patients":len(dev),
               "outer_engineering_eval_patients":len(evaluation),
-              "same_v04_hidden_positive_eval":sum(r["label"] for r in evaluation),
+              "same_v04_hidden_positive_eval":("suppressed" if sum(r["label"] for r in evaluation)<10 else sum(r["label"] for r in evaluation)),
               "eligible_train_V04":len(rows),
               "temporal_prior_available_in_eval":
                 sum(pid in lookup for pid in output),
@@ -135,7 +135,7 @@ def main():
         rows,items,options.arm,backend,options.questions,
         options.max_patients,priors=priors,rsi_rounds=options.rsi_rounds)
     out.mkdir(parents=True,exist_ok=True)
-    safe_csv(out/"arm_metrics.csv",[metrics])
+    safe_csv(out/"arm_metrics.csv",[{**metrics,"positive":metrics["positive"] if metrics["positive"]>=10 else "<10","captured_positives":metrics["captured_positives"] if metrics["captured_positives"]>=10 else "<10"}])
     safe_csv(out/"rsi_verifier_trace.csv",history)
     report={
        "status":"Phase59_integrated_grounded_Qwen_temporal_WM_RSI_engineering_pilot",
@@ -168,7 +168,7 @@ def main():
        "generated_utc":datetime.now(timezone.utc).isoformat()
     }
     (out/"summary.json").write_text(json.dumps(report,indent=2)+"\n")
-    print(json.dumps({"metrics":metrics,"summary":report},indent=2))
+    print(json.dumps({"arm":options.arm,"metrics_file":"arm_metrics.csv","summary":report},indent=2))
     print("Only aggregate report may leave cluster.")
 
 
