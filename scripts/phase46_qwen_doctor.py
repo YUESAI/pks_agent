@@ -70,9 +70,9 @@ def make_messages(remaining,observed,risk,information_gain,mode):
 
 
 class TransformersDoctor:
-    """One local Qwen model per GPU process; transformers offline inference."""
+    """One local Qwen model per process; offline GPU or explicit CPU inference."""
 
-    def __init__(self,model_dir,max_new_tokens=48):
+    def __init__(self,model_dir,max_new_tokens=48,device="cuda"):
         model_dir=Path(model_dir).expanduser().resolve()
         if not (model_dir/"config.json").is_file():
             raise FileNotFoundError("Missing offline model config.json: "+str(model_dir))
@@ -80,6 +80,8 @@ class TransformersDoctor:
             raise FileNotFoundError("Missing downloaded safetensors: "+str(model_dir))
         if not 1<=max_new_tokens<=128:
             raise ValueError("Limit output tokens to 1..128")
+        if device not in ("cpu","cuda"):
+            raise ValueError("Qwen inference device must be cpu or cuda")
         os.environ["HF_HUB_OFFLINE"]="1"
         os.environ["TRANSFORMERS_OFFLINE"]="1"
         os.environ.setdefault("HF_HOME","/scratch/ylong66/hf_cache")
@@ -90,16 +92,19 @@ class TransformersDoctor:
         except ImportError as exc:
             raise RuntimeError("Install torch, transformers>=4.51 and accelerate "
                                "on login node before compute submission") from exc
-        if not torch.cuda.is_available():
-            raise RuntimeError("Phase46 requires CUDA GPU; submit an L40S/H100 job")
+        if device=="cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA is unavailable; set device=cpu for CPU inference")
+        self.inference_device=device
         self.torch=torch
         self.tokenizer=AutoTokenizer.from_pretrained(
             str(model_dir),local_files_only=True,trust_remote_code=False)
         self.model=AutoModelForCausalLM.from_pretrained(
             str(model_dir),local_files_only=True,trust_remote_code=False,
-            torch_dtype=(torch.bfloat16 if torch.cuda.is_bf16_supported()
-                         else torch.float16),
-            device_map="auto",low_cpu_mem_usage=True)
+            torch_dtype=(torch.float32 if device=="cpu" else
+                         (torch.bfloat16 if torch.cuda.is_bf16_supported()
+                          else torch.float16)),
+            device_map=("cpu" if device=="cpu" else "auto"),
+            low_cpu_mem_usage=True)
         self.model.eval()
         self.max_new_tokens=max_new_tokens
         self.local_dir=str(model_dir)
