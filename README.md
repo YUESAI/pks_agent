@@ -1515,3 +1515,8 @@ sbatch slurm/phase55_dusky_markov_controls.sbatch
 ## Phase55 actual results (2026-10-21)
 
 The completed 658-patient **TRAIN-only** 5-fold experiment found **tuned item Markov NLL 0.410580** versus **masked temporal WM 0.413298**, item marginal 0.448684, fixed persistence 0.669542. WM minus tuned Markov patient-paired delta **+0.002718**, bootstrap 95% **[-0.002875, +0.008620]**: no demonstrated advantage over a tuned temporal statistical baseline. Markov selected *pooled* (non-time-binned) transitions in all five folds. See [Phase55 actual metrics and next research gates](docs/PHASE55_ACTUAL_RESULTS_DECISION.md). Focus subsequent experiments on cross-item prediction, R01→V04 masked-to-onsite forecasting, and true open-loop multiple-visit prediction rather than scaling the neural WM on the same single-step endpoint. Consumed Phase44 TEST remains untouched.
+
+
+## Phase56 actual results and Phase57 R01 clinical ranking baseline
+
+[Phase56 report and Phase57 protocol](docs/PHASE56_ACTUAL_RESULTS_PHASE57_BASELINE.md): in 197 frozen TRAIN real R01→later V04 cases (57 later hidden-six positives), the temporal latent WM had NLL 0.315892, AUROC 0.679261 and captured 19/57 positives at a 39-person 20% onsite quota; tuned Markov NLL 0.314551, AUROC 0.650940, captured 23/57. WM vs Markov patient-paired NLL difference +0.001341, CI [-0.024964,+0.025792]. No demonstrated WM gain versus strong Markov. Phase57 adds the missing frozen R01 visible-27 item sum on precisely the Phase56 eligible cohort (no extra model training): `sbatch slurm/phase57_dusky_cpu_visible27.sbatch`. These remain repeatedly explored TRAIN results, not independent confirmation.
