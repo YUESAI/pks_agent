@@ -1,0 +1,22 @@
+# Keep all data, derived reports and model weights off GitHub.
+outputs/
+data/
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.sas7bdat
+*.xpt
+*.csv.gz
+*.tsv.gz
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+
+# Local patient-level research database files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
