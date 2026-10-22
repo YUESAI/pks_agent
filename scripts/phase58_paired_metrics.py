@@ -126,7 +126,9 @@ def compute_matrix(scores,labels,ids,seed,nboot=500,budget=.2,
                 "selected_intersection":intersection if intersection>=10 or intersection==0 else "<10",
                 "selected_jaccard":round(intersection/union,6)
                     if intersection>=10 or intersection==0 else "",
-                "both_capture_positive":int(y[list(selected[a]&selected[b])].sum())
+                "both_capture_positive":(
+                    lambda count: count if count==0 or count>=10 else "<10"
+                )(int(y[list(selected[a]&selected[b])].sum()))
                     if intersection>=10 or intersection==0 else "<10"
             })
     return metrics,paired,overlaps
