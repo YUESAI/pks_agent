@@ -95,7 +95,16 @@ def prepare_messages(mode,remaining,observed,world,style):
     vals={k:world.candidate_value(observed,k,style) for k in remaining}
     is_plain=(mode=="plain")
     messages=make_messages(remaining,observed,world.posterior(observed),
-                           vals,"llm_plain" if is_plain else "llm_wm")
+                           vals,"llm_plain")
+    if not is_plain:
+        messages[-1]["content"]=messages[-1]["content"].replace(
+            "No World Model predictions are available to you.","")
+        top=sorted(remaining,key=lambda k:(-vals[k],k))[:10]
+        messages[-1]["content"]+=(
+            "\\nEstimated hidden-outcome risk: "+
+            format(world.posterior(observed),".4f")+
+            "\\nTop candidate model scores: "+
+            json.dumps({k:round(vals[k],6) for k in top}))
     if not is_plain:
         # Label and purpose of the candidate metric must be true.
         description={
