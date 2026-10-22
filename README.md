@@ -1540,3 +1540,8 @@ The [immutable cumulative Phase23–58 research ledger](docs/EXPERIMENT_LEDGER_P
 ## Phase59 runnable: four parallel Qwen Doctor + WM + RSI engineering experiments
 
 [Phase59 full implementation, safety limits and exact submission commands](docs/PHASE59_FOUR_ARM_IMPLEMENTATION.md). The shared offline L40S job `slurm/phase59_dusky_four_arm.sbatch` accepts `PHASE59_ARM=plain|observation|dual|rsi`, and each arm uses the same fixed frozen-TRAIN V04 fit/development/evaluation split and question budget. The two-WM modes use a BL-only temporal prior trained without development or evaluation patient IDs; the RSI mode accepts or rejects allowlisted Qwen proposals using a deterministic development Brier verifier. This is an integrated **simulation engineering pilot**, not verified neural weight co-evolution or a real R01 intervention. No new model download is needed. Run synthetic tests first: `python -m unittest tests.test_phase59_integrated_pilot -v`.
+
+
+## Phase59 full experiments on CPU (no GPU, no smoke job)
+
+When Dusky L40S is scarce, the [four-arm Phase59 CPU production guide](docs/PHASE59_FULL_CPU_COMMANDS.md) uses the **real offline Qwen3-4B** in float32 CPU mode, with four independent `def-hup-ab_cpu` / `base` jobs. Each arm requests 12 CPU cores and 64 GB memory, skips repeated synthetic tests in the batch job and runs 60 evaluation patients × 8 measured questions. This is substantially more CPU-intensive than fitting the small neural clinical World Model. Original Phase44 TEST remains unused. Run four submissions as specified in the guide.
