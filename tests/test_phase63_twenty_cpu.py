@@ -14,8 +14,8 @@ class Phase63Tests(unittest.TestCase):
   b=fixed_folds(list(reversed(rows)),("prodromal",12))
   self.assertEqual(a.tolist(),list(reversed(b.tolist())))
  def test_missing_imputed_on_training_only(self):
-  a=np.array([[0.,1.],[10.,1.],[np.nan,1.]])
-  b=np.array([[999.,1.],[np.nan,1.]])
+  a=np.zeros((3,27),dtype=float);a[0,0]=0.;a[1,0]=10.;a[2,0]=np.nan
+  b=np.zeros((2,27),dtype=float);b[0,0]=999.;b[1,0]=np.nan
   fit,held=train_fold_preprocess(a,b,"visible27_scores")
   self.assertTrue(np.isfinite(fit).all())
   self.assertTrue(np.isfinite(held).all())
