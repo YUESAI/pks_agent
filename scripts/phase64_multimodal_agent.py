@@ -205,9 +205,8 @@ def main():
         if len(rows)<80:
             sizes.append({"task":str(task),"status":"insufficient","n":len(rows)})
             continue
-        fit,tune,audit=partition(rows,task)
-        # Guard against selecting on the evaluation subjects:
-        evaluation=[r for r in rows if fold_id(r["pid"],task)==0]
+        # Prespecified split: folds 2/3/4 FIT, fold 0 TUNE/AUDIT,
+        # fold 1 solely evaluates the selected final system.
         # Reporting EVAL is a separate cohort from WM fit; tune and audit
         # are internal segments of the heldout fold and must be excluded
         # from final scoring (avoid selection contamination).
@@ -251,7 +250,7 @@ def main():
         "source":meta["source_motor_table"],
         "modalities_read":quality,
         "model":"TRAIN-fit masked ridge conditional heuristic WM",
-        "rsi":"constrained scalar calibration; not coevolved neural weights",
+        "rsi":"deterministic verifier-gated calibration using greedy proxy; not LLM-proposed or coevolved neural weights",
         "qwen":"real local Qwen 4B CPU" if backend else "none",
         "time_seconds":time.perf_counter()-started,
         "llm_prompts":backend.total_prompts if backend else 0,
