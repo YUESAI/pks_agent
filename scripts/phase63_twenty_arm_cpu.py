@@ -102,7 +102,7 @@ def _valid_r01(person):
     return valid[0] if len(valid) == 1 else None
 
 
-def build_inputs(rows, people_by_id, representation):
+def build_inputs(rows, people_by_id, representation, task):
     if representation not in REPRESENTATIONS:
         raise ValueError("Unknown information panel")
     features = []
@@ -119,9 +119,11 @@ def build_inputs(rows, people_by_id, representation):
         else:
             row = np.concatenate((values, _statuses(bl, indices)))
         if representation == "full33_r01":
-            # Adds information: this panel is NOT BL-only.
+            # At 6m, R01 may occur AFTER the chosen target visit.
+            # Do not use it at all for 6m forecasting.
+            # Adds information for 12/24m only; this panel is NOT BL-only.
             person = people_by_id[record["pid"]]
-            remote = _valid_r01(person)
+            remote = _valid_r01(person) if task[1] >= 12 else None
             if remote is not None:
                 history_n += 1
                 rvalue = _real_scores(remote, VISIBLE_IDX)
@@ -204,7 +206,7 @@ def predict_oof(rows, people_by_id, task, candidates, folds=5):
     for name, _ in needed:
         if name not in xs:
             xs[name], history[name] = build_inputs(
-                rows, people_by_id, name)
+                rows, people_by_id, name, task)
     estimates = {config: np.full(len(rows), np.nan, dtype=float)
                  for config in needed}
     for fold in range(folds):
@@ -381,7 +383,8 @@ def main():
             "Same target patients, label-blind fixed fold hash across all 20 jobs",
             "Twelve- and twenty-four-month future labels are true measurements",
             "BL-only predictors except explicitly named full33_r01 arm",
-            "R01, if used, was observed at 4..8m, before earliest 12m target",
+            "R01 is forbidden in 6m tasks because it can postdate the target",
+            "R01 if used at 12/24m was observed at 4..8m before outcome window",
             "R01 missingness retained; never impute a 101/UR as measured zero",
             "Historical 6 item BL scoring included only in full33 panels",
             "Model hyperparameters fixed before OOF; no outer-label tuning",
