@@ -3,10 +3,9 @@
 #SBATCH --partition=base
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=48G
-#SBATCH --time=24:00:00
-#SBATCH --array=0-19%5
-#SBATCH --output=slurm-phase64-%A_%a.log
-#SBATCH --error=slurm-phase64-%A_%a.log
+#SBATCH --time=12:00:00
+#SBATCH --output=slurm-phase64-%j.log
+#SBATCH --error=slurm-phase64-%j.log
 set -euo pipefail
 module --force purge || true
 unset LD_LIBRARY_PATH LD_PRELOAD PYTHONHOME PYTHONPATH
@@ -20,14 +19,17 @@ PY=/scratch/ylong66/conda/envs/pks_qwen46_cu118/bin/python
 MODEL=/scratch/ylong66/models/Qwen--Qwen3-4B-Instruct-2507
 cd "$REPO"
 export PYTHONPATH="$REPO"
-: "${SLURM_ARRAY_TASK_ID:?Submit as an array job}"
+ARM="${PHASE64_ARM_ID:?Set PHASE64_ARM_ID=0..19 for an ordinary sbatch job}"
+if ! [[ "$ARM" =~ ^([0-9]|1[0-9])$ ]]; then
+  echo "Invalid PHASE64_ARM_ID=$ARM (valid: 0..19)"; exit 2
+fi
 [[ -x "$PY" ]] || { echo "Python environment missing"; exit 127; }
-if [[ "$((SLURM_ARRAY_TASK_ID % 4))" != 0 ]]; then
+if [[ "$((ARM % 4))" != 0 ]]; then
   [[ -f "$MODEL/config.json" ]] || { echo "Offline Qwen checkpoint missing"; exit 127; }
 fi
-OUT="/scratch/ylong66/pks_agent_outputs/phase64_multimodal_${SLURM_ARRAY_TASK_ID}_${SLURM_ARRAY_JOB_ID}"
+OUT="/scratch/ylong66/pks_agent_outputs/phase64_multimodal_${ARM}_${SLURM_JOB_ID}"
 "$PY" scripts/phase64_multimodal_agent.py \
-  --arm-id "$SLURM_ARRAY_TASK_ID" \
+  --arm-id "$ARM" \
   --data-root /scratch/ylong66/data/pks/data \
   --manifest-db "$REPO/outputs/longitudinal_manifests/prodromal_motor_v0.sqlite" \
   --model-dir "$MODEL" --report-dir "$OUT" \
