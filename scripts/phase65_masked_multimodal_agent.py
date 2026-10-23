@@ -294,7 +294,7 @@ def main():
                p["pid"] not in held_ids and
                fold_id(p["pid"],task) in (2,3,4)]
         wm=MaskedOutcomeWM(allowed,q=a.questions,
-                           repeats=a.mask_repeats,seed=SEED+a.arm_id).fit(
+                           repeats=a.mask_repeats,seed=SEED+panel).fit(
                                fit,unlabelled=extra)
         revision=("variance",1.)
         trace={"accepted":False,"audit_proposals":0}
