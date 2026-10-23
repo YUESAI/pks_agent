@@ -74,7 +74,8 @@ def evidence_tables(root,people):
                      ["DRMVIVID","SLPINJUR"] if label=="RBD" else
                      [h for h in headers if re.fullmatch(selector,h)])
             matches=[col for col in matches if col in headers and
-                     not col.endswith(("TOT","TOTAL"))]
+                     (label in ("MoCA","UPSIT","RBD") or
+                      not col.endswith(("TOT","TOTAL")))]
             coverage["features_found_"+label]=len(matches)
             for row in reader:
                 pid=str(row.get("PATNO","")).strip()
