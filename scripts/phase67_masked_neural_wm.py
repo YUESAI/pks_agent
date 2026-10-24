@@ -27,8 +27,8 @@ class Net(nn.Module):
         return self.outcome(hidden),self.reconstruct(hidden).reshape(len(x),-1,5)
 
 class NeuralClinicalWM:
-    def __init__(self,items,alpha=5.,epochs=16,seed=20261018):
-        self.items=tuple(items);self.epochs=epochs;self.seed=seed
+    def __init__(self,items,alpha=5.,epochs=16,seed=20261018,q=4):
+        self.items=tuple(items);self.epochs=epochs;self.seed=seed;self.q=q
         self.index={name:i for i,name in enumerate(items)}
         self.motor_idx=[(j,name) for j,name in enumerate(items)
                         if name.startswith(("BL_","R01_")) and
@@ -72,7 +72,7 @@ class NeuralClinicalWM:
                 for j in chosen:
                     r=train[int(j)];actual=r["measured"]
                     keys=[k for k in actual if k in self.index]
-                    keep=(generator.choice(keys,size=generator.integers(0,min(len(keys),8)+1),
+                    keep=(generator.choice(keys,size=generator.integers(0,min(len(keys),self.q)+1),
                            replace=False).tolist() if keys else [])
                     reveal={k:actual[k] for k in keep}
                     xs.append(self._values(reveal))
@@ -92,8 +92,6 @@ class NeuralClinicalWM:
                 t=torch.tensor(targets,dtype=torch.long)
                 m=torch.tensor(mask_rec,dtype=torch.float32)
                 logits,rec=self.net(x)
-                loss=torch.nn.functional.cross_entropy(logits[:min(len(chosen),len(labelled))],
-                            labels[:min(len(chosen),len(labelled))]) if False else None
                 # Explicit row-level supervised mask, not arbitrary batch prefix.
                 supervised=torch.tensor([int(j)<len(labelled) for j in chosen],dtype=torch.bool)
                 if supervised.any():
