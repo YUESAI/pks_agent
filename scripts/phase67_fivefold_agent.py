@@ -22,7 +22,7 @@ SEED=20261018
 
 def fold(pid,task):
     # Same fixed outcome-blind fold for all 20 jobs.
-    h=hashlib.sha256(f"phase67|{SEED}|{task}|{pid}".encode()).hexdigest()
+    h=hashlib.sha256(f"phase66|{SEED}|{task}|{pid}".encode()).hexdigest()
     return int(h[:12],16)%5
 
 def config(arm):
