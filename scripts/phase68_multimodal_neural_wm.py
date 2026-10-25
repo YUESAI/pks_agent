@@ -96,8 +96,9 @@ class MultimodalMaskedWM:
         optimizer=torch.optim.AdamW(self.net.parameters(),lr=.0008,weight_decay=.015)
         n=len(self.items)
         for epoch in range(self.epochs):
+            order=generator.permutation(len(all_rows))
             for start in range(0,len(all_rows),32):
-                indices=generator.permutation(len(all_rows))[start:start+32]
+                indices=order[start:start+32]
                 X=[];targets=[];mask=[];classes=[];supervision=[]
                 for ridx in indices:
                     record=all_rows[int(ridx)];measured=record["measured"]
