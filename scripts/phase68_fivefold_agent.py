@@ -13,7 +13,7 @@ import numpy as np
 from scripts.phase62_ppmi_multicohort_audit import load_cohorts,future_site_pairs
 from scripts.phase64_evidence import evidence_tables,panel_items,episode_rows,PatientTool
 from scripts.phase46_qwen_doctor import TransformersDoctor,extract_action
-from scripts.phase68_masked_neural_wm import NeuralClinicalWM
+from scripts.phase68_multimodal_neural_wm import MultimodalMaskedWM
 from scripts.phase60_cpu_multistep_wm import auc
 
 TASKS=(("prodromal",12),("prodromal",24),("PD",12))
