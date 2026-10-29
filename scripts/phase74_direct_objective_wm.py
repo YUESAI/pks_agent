@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""Phase74: MAE-aligned longitudinal WM vs strong same-evidence clinical baselines.
+
+Twenty standalone CPUs = five original subject folds x four strategies.
+0: time-feature Ridge; 1: time-feature HistGBM;
+2: direct-burden multitask CT latent WM with motor-transition self-supervision;
+3: train an allowlisted revised CT loss on FIT; select on DEV, gate on
+   independent AUDIT, then evaluate exactly once on outer holdout.
+
+All models in each job use identical recorded BL non-motor fields and
+pre-cutoff chronological *visible27* Motor visits. PatientTool, fake
+observations, and Qwen are NOT used: this tests WM prediction itself.
+No PHI or individual predictions exported.
+"""
+from __future__ import annotations
+
+import argparse,csv,hashlib,json,math,time
+from collections import Counter
+from datetime import datetime,timezone
+from pathlib import Path
+
+import numpy as np
+import torch
+from torch import nn
+from sklearn.ensemble import HistGradientBoostingRegressor, HistGradientBoostingClassifier
+from sklearn.linear_model import Ridge,LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+from scripts.phase36_masked_site_feasibility import VISIBLE
+from scripts.phase62_ppmi_multicohort_audit import load_cohorts,future_site_pairs
+from scripts.phase64_evidence import evidence_tables
+from scripts.phase73_matched_longitudinal_agent import data_rows,split_data
+from scripts.phase72_ctlatent_wm import sequence_features,build_auxiliary
+from scripts.phase60_cpu_multistep_wm import auc
+
+SEED=20261018
+TASKS=(("prodromal",12),("prodromal",24),("PD",12))
+MAX_CLINICAL=64
+
+def optional_keys(fit):
+    counts=Counter(k for r in fit for k in r["optional"])
+    return tuple(k for k,count in sorted(counts.items(),key=lambda v:(-v[1],v[0]))
+                 if count>=10)[:MAX_CLINICAL]
+
+def clinical_scale(key):
+    return 40. if key.startswith(("MoCA","UPSIT")) else 4.
+
+def engineered(rows,keys):
+    """Only measured historical visible27 and measured BL clinical tests."""
+    arr=[]
+    for row in rows:
+        hist=row["history"]
+        if not hist:raise ValueError("Missing chronological original BL")
+        if any(b["month"]<a["month"] for a,b in zip(hist,hist[1:])):
+            raise AssertionError("Nonchronological origin features")
+        first,last=hist[0],hist[-1]
+        time=max(1.,float(last["month"]-first["month"]))
+        out=[]
+        for item in VISIBLE:
+            observed=[(float(v["month"]),float(v["scores"][item]))
+                      for v in hist if item in v["scores"]]
+            first_val=observed[0][1] if observed else 0.
+            last_val=observed[-1][1] if observed else 0.
+            change=(last_val-first_val)/4. if len(observed)>1 else 0.
+            slope=(last_val-first_val)/max(1.,observed[-1][0]-observed[0][0])
+            out.extend([first_val/4.,last_val/4.,change,
+                        slope*6./4.,len(observed)/6.,float(bool(observed))])
+        out.extend([len(hist)/6.,(last["month"]-first["month"])/36.,
+                    (row["anchor"]+row["horizon"]-last["month"])/36.,
+                    row["horizon"]/36.])
+        for key in keys:
+            value=row["optional"].get(key)
+            out.extend([float(value)/clinical_scale(key) if value is not None else 0.,
+                        float(value is not None)])
+        arr.append(out)
+    x=np.array(arr,dtype=np.float32)
+    if not np.isfinite(x).all():raise AssertionError("Nonfinite predictors")
+    return x
+
+def labels(rows):
+    site=np.asarray([r["site"] for r in rows],dtype=int)
+    if site.shape!=(len(rows),6) or (site<0).any() or (site>4).any():
+        raise ValueError("Six true clinical item ratings required")
+    return site,site.sum(axis=1).astype(float),(site.sum(axis=1)>0).astype(int)
+
+def score(pred,rows):
+    mean,risk=pred
+    _,y,z=labels(rows)
+    mean=np.asarray(mean,dtype=float);risk=np.asarray(risk,dtype=float)
+    if len(mean)!=len(rows) or len(risk)!=len(rows):
+        raise AssertionError("Predictions not aligned")
+    if not np.isfinite(mean).all() or not np.isfinite(risk).all():
+        raise AssertionError("Nonfinite predictions")
+    return {"mae":float(np.mean(np.abs(mean-y))),
+            "rmse":float(np.mean((mean-y)**2)**.5),
+            "brier":float(np.mean((risk-z)**2)),
+            "auroc":auc(risk.tolist(),z.tolist())}
+
+class TimeTabular:
+    def __init__(self,kind):
+        if kind not in ("ridge","hgb"):raise ValueError("Bad estimator")
+        self.kind=kind
+    def fit(self,rows,keys):
+        self.keys=keys
+        X=engineered(rows,keys)
+        _,y,binary=labels(rows)
+        if self.kind=="ridge":
+            self.mean=make_pipeline(StandardScaler(),Ridge(alpha=20.))
+            self.risk=make_pipeline(StandardScaler(),
+                                   LogisticRegression(C=.15,max_iter=1000))
+        else:
+            self.mean=HistGradientBoostingRegressor(
+                max_iter=180,max_leaf_nodes=9,min_samples_leaf=15,
+                learning_rate=.04,l2_regularization=20.,random_state=SEED)
+            self.risk=HistGradientBoostingClassifier(
+                max_iter=130,max_leaf_nodes=7,min_samples_leaf=15,
+                learning_rate=.04,l2_regularization=20.,random_state=SEED)
+        self.mean.fit(X,y)
+        self.single_class=len(set(binary))<2
+        self.prior=float((binary.sum()+1)/(len(binary)+2))
+        if not self.single_class:self.risk.fit(X,binary)
+        return self
+    def predict(self,rows):
+        X=engineered(rows,self.keys)
+        y=np.maximum(0.,np.asarray(self.mean.predict(X)))
+        p=(np.full(len(rows),self.prior) if self.single_class
+           else self.risk.predict_proba(X)[:,1])
+        return y,np.clip(p,0,1)
+
+class CTDirect(nn.Module):
+    def __init__(self,nclinical,width=80):
+        super().__init__()
+        self.observation=nn.Sequential(nn.Linear(54,64),nn.GELU())
+        self.decay_logits=nn.Parameter(torch.full((width,),-1.))
+        self.cell=nn.GRUCell(64,width)
+        self.context=nn.Sequential(nn.Linear(width+2*nclinical+2,96),
+                                   nn.LayerNorm(96),nn.GELU(),
+                                   nn.Dropout(.12))
+        self.total=nn.Linear(96,1)
+        self.binary=nn.Linear(96,1)
+        self.site=nn.Linear(96,6*5)
+        self.next_visible=nn.Linear(96,27*5)
+    def forward(self,x,dt,valid,clinical,horizon):
+        h=x.new_zeros((x.shape[0],self.cell.hidden_size))
+        rate=torch.nn.functional.softplus(self.decay_logits)
+        for t in range(x.shape[1]):
+            next_h=self.cell(self.observation(x[:,t]),
+                             h*torch.exp(-rate*dt[:,t,None]))
+            h=torch.where(valid[:,t,None],next_h,h)
+        z=self.context(torch.cat((h,clinical,horizon),dim=1))
+        return (nn.functional.softplus(self.total(z).squeeze(1)),
+                self.binary(z).squeeze(1),
+                self.site(z).reshape(-1,6,5),
+                self.next_visible(z).reshape(-1,27,5))
+
+class DirectWM:
+    def __init__(self,keys,style="balanced",epochs=18,seed=SEED):
+        self.keys=keys;self.style=style;self.epochs=epochs;self.seed=seed
+        if style not in ("balanced","mae_revision"):
+            raise ValueError("Unallowlisted WM revision")
+    def fit(self,fit,aux):
+        torch.set_num_threads(4)
+        torch.manual_seed(self.seed)
+        gen=np.random.default_rng(self.seed)
+        self.net=CTDirect(len(self.keys))
+        opt=torch.optim.AdamW(self.net.parameters(),lr=.0008,weight_decay=.025)
+        inp=sequence_features(fit,self.keys)
+        site,y,binary=labels(fit)
+        site=torch.tensor(site,dtype=torch.long)
+        y=torch.tensor(y,dtype=torch.float32)
+        binary=torch.tensor(binary,dtype=torch.float32)
+        if aux:
+            ax=sequence_features(aux,self.keys)
+            target=torch.tensor([r["aux_motor"] for r in aux],dtype=torch.long)
+        else:ax=None;target=None
+        weights=((.50,.35,.15) if self.style=="balanced" else
+                 (.90,.05,.05))
+        for epoch in range(self.epochs):
+            order=gen.permutation(len(fit))
+            self.net.train()
+            for start in range(0,len(fit),32):
+                ii=order[start:start+32]
+                batch=[a[ii] for a in inp]
+                # Optional clinical observations may be absent; never
+                # invent a score. Stochastic release masks an observed
+                # clinical input only (already measured in FIT).
+                if len(self.keys):
+                    clinical=batch[3].clone()
+                    n=len(self.keys)
+                    keep=torch.from_numpy((gen.random((len(ii),n))>.15).astype(np.float32))
+                    clinical[:,:n]*=keep
+                    clinical[:,n:]*=keep
+                    batch[3]=clinical
+                total,risk,sites,_=self.net(*batch)
+                huber=torch.nn.functional.smooth_l1_loss(total,y[ii],beta=1.5)
+                ce=torch.nn.functional.cross_entropy(sites.reshape(-1,5),
+                                                     site[ii].reshape(-1))
+                bce=torch.nn.functional.binary_cross_entropy_with_logits(
+                    risk,binary[ii])
+                loss=weights[0]*huber+weights[1]*ce+weights[2]*bce
+                if ax is not None and len(aux):
+                    jj=gen.integers(0,len(aux),size=min(len(ii),32))
+                    _,_,_,nextlogits=self.net(*[a[jj] for a in ax])
+                    loss=loss+.12*torch.nn.functional.cross_entropy(
+                        nextlogits.reshape(-1,5),target[jj].reshape(-1),
+                        ignore_index=-100)
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.net.parameters(),1.)
+                opt.step()
+        self.net.eval()
+        return self
+    def predict(self,rows):
+        xs=sequence_features(rows,self.keys)
+        self.net.eval()
+        with torch.inference_mode():
+            total,logit,_,_=self.net(*xs)
+            return total.numpy().astype(float),torch.sigmoid(logit).numpy().astype(float)
+
+def paired_bootstrap(reference,candidate,rows,seed,repeats=500):
+    _,y,_=labels(rows)
+    delta=np.abs(candidate[0]-y)-np.abs(reference[0]-y)
+    rng=np.random.default_rng(seed)
+    distribution=np.array([delta[rng.integers(0,len(delta),len(delta))].mean()
+                           for _ in range(repeats)])
+    return {"delta_mae":float(delta.mean()),
+            "ci_low":float(np.quantile(distribution,.025)),
+            "ci_high":float(np.quantile(distribution,.975))}
+
+def write_csv(path,records):
+    if records:
+        with path.open("w",newline="",encoding="utf8") as file:
+            writer=csv.DictWriter(file,fieldnames=list(records[0]))
+            writer.writeheader();writer.writerows(records)
+
+def choose_revision(incumbent,proposal,tune,audit):
+    before=score(incumbent.predict(tune),tune)
+    after=score(proposal.predict(tune),tune)
+    if after["mae"]+0.01>=before["mae"]:
+        return incumbent,{"proposed":"mae_revision","accepted":False,
+            "reason":"dev_not_improved","dev_before":before["mae"],
+            "dev_proposed":after["mae"],"audit_checked":False}
+    original=score(incumbent.predict(audit),audit)
+    candidate=score(proposal.predict(audit),audit)
+    accepted=(candidate["mae"]+.005<original["mae"] and
+              candidate["brier"]<=original["brier"]+.01)
+    return (proposal if accepted else incumbent),{
+        "proposed":"mae_revision","accepted":bool(accepted),
+        "reason":"audit_accept" if accepted else "audit_reject",
+        "dev_before":before["mae"],"dev_proposed":after["mae"],
+        "audit_checked":True,"audit_before":original["mae"],
+        "audit_proposed":candidate["mae"],
+        "audit_brier_before":original["brier"],
+        "audit_brier_proposed":candidate["brier"]}
+
+def run(args):
+    if not 0<=args.arm_id<20:raise ValueError("Arm 0..19 required")
+    fold,variant=divmod(args.arm_id,4)
+    out=args.report_dir.resolve();root=args.data_root.resolve()
+    if root==out or root in out.parents or not args.manifest_db.is_file():
+        raise ValueError("Unsafe output or missing frozen TRAIN")
+    out.mkdir(parents=True,exist_ok=False)
+    start=time.perf_counter()
+    people,_=load_cohorts(root,args.manifest_db)
+    evidence,quality,_=evidence_tables(root,people)
+    results=[];contrasts=[];coverage=[];audits=[]
+    for task in TASKS:
+        patients=[p for p in people if p["cohort"]==task[0]]
+        target,_=future_site_pairs(patients,task[1])
+        rows=data_rows(patients,target,evidence,task)
+        fit,tune,audit,held=split_data(rows,task,fold)
+        if min(map(len,(fit,tune,audit,held)))<10:
+            coverage.append({"task":str(task),"status":"insufficient"})
+            continue
+        keys=optional_keys(fit)
+        fit_ids={r["pid"] for r in fit}
+        label_ids={r["pid"] for r in rows}
+        # Only original FIT-subject trajectories are used for auxiliary
+        # forecasting; excluded labelled persons cannot leak through.
+        aux_candidates=[p for p in patients if p["pid"] in fit_ids]
+        aux=build_auxiliary(aux_candidates)
+        ridge=TimeTabular("ridge").fit(fit,keys)
+        hgb=TimeTabular("hgb").fit(fit,keys)
+        predictions={"ridge":ridge.predict(held),"hgb":hgb.predict(held)}
+        if variant in (2,3):
+            standard=DirectWM(keys,style="balanced",epochs=args.epochs,
+                              seed=SEED+fold+task[1]).fit(fit,aux)
+            predictions["ct_direct"]=standard.predict(held)
+            if variant==3:
+                revised=DirectWM(keys,style="mae_revision",epochs=args.epochs,
+                                 seed=SEED+fold+task[1]).fit(fit,aux)
+                chosen,ver=choose_revision(standard,revised,tune,audit)
+                predictions["ct_verified"]=chosen.predict(held)
+                audits.append({"cohort":task[0],"horizon":task[1],
+                               "fold":fold,**ver})
+        primary={0:"ridge",1:"hgb",2:"ct_direct",3:"ct_verified"}[variant]
+        for name,pred in predictions.items():
+            results.append({"cohort":task[0],"horizon":task[1],"fold":fold,
+                "arm_id":args.arm_id,"model":name,"primary":name==primary,
+                "patients":len(held),"positive":int(labels(held)[2].sum()),
+                "optional_features":len(keys),
+                "mean_history_visits":float(np.mean([len(r["history"]) for r in held])),
+                **score(pred,held)})
+        for name in predictions:
+            if name=="ridge":continue
+            contrasts.append({"cohort":task[0],"horizon":task[1],"fold":fold,
+                "reference":"ridge","candidate":name,
+                **paired_bootstrap(predictions["ridge"],predictions[name],held,
+                                   SEED+fold+task[1])})
+        coverage.append({"cohort":task[0],"horizon":task[1],"fold":fold,
+            "fit":len(fit),"dev":len(tune),"audit":len(audit),
+            "evaluation":len(held),"real_fit_visit_pairs":len(aux),
+            "n_eval_history2plus":sum(len(r["history"])>=2 for r in held),
+            "n_eval_history3plus":sum(len(r["history"])>=3 for r in held),
+            "status":"complete"})
+        # Atomic task-level aggregate snapshots: survive a 12h time cap.
+        write_csv(out/"method_metrics.csv",results)
+        write_csv(out/"paired_bootstrap.csv",contrasts)
+        write_csv(out/"coverage.csv",coverage)
+        (out/"audit.json").write_text(json.dumps(audits,indent=2)+"\n")
+        (out/"progress.json").write_text(json.dumps({
+            "status":"partial","last_finished_task":list(task),
+            "completed_tasks":len(coverage),"elapsed_seconds":round(
+                time.perf_counter()-start,2)},indent=2)+"\n")
+        print("PHASE74_TASK_DONE",task,"arm",args.arm_id,flush=True)
+    (out/"summary.json").write_text(json.dumps({
+        "phase":74,"arm_id":args.arm_id,"outer_fold":fold,"variant":variant,
+        "status":"complete","completed_tasks":len(coverage),
+        "elapsed_seconds":round(time.perf_counter()-start,2),
+        "multimodal_quality":quality,
+        "limits":["Frozen Prodromal TRAIN / strict PD only",
+                  "Same actual visible27 longitudinal histories and baseline optional tests",
+                  "No Qwen or autonomous RSI: verified model-loss revision only",
+                  "No outcome/site from heldout used in FIT/DEV/AUDIT",
+                  "Task-level reports persist before 12h walltime",
+                  "Original consumed final TEST never accessed",
+                  "No patient records exported"],
+        "generated_utc":datetime.now(timezone.utc).isoformat()},indent=2)+"\n")
+    (out/"progress.json").write_text(json.dumps({"status":"complete",
+                  "completed_tasks":len(coverage)},indent=2)+"\n")
+    print(json.dumps({"status":"success","arm":args.arm_id,
+                      "completed_tasks":len(coverage),"path":str(out)}))
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument("--arm-id",type=int,required=True)
+    p.add_argument("--data-root",type=Path,required=True)
+    p.add_argument("--manifest-db",type=Path,required=True)
+    p.add_argument("--report-dir",type=Path,required=True)
+    p.add_argument("--epochs",type=int,default=18)
+    a=p.parse_args()
+    if not 4<=a.epochs<=100:raise ValueError("Invalid epoch setting")
+    run(a)
+if __name__=="__main__":main()
