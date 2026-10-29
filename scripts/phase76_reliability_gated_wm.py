@@ -205,7 +205,7 @@ class DirectWM:
             ax=sequence_features(aux,self.keys)
             target=torch.tensor([r["aux_motor"] for r in aux],dtype=torch.long)
         else:ax=None;target=None
-        weights=((.50,.35,.15) if self.style=="balanced" else
+        weights=((.50,.35,.15) if self.style in ("balanced","early","gated") else
                  (.90,.05,.05))
         for epoch in range(self.epochs):
             order=gen.permutation(len(fit))
