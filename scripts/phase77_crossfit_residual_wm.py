@@ -16,6 +16,7 @@ No DEV/AUDIT/outer patient is used for residual or WM training.
 """
 from __future__ import annotations
 import argparse,csv,hashlib,json,time,faulthandler,sys,os
+import torch
 from collections import Counter
 from datetime import datetime,timezone
 from pathlib import Path
@@ -324,7 +325,14 @@ def main():
     args=p.parse_args()
     faulthandler.enable(file=sys.stderr,all_threads=True)
     faulthandler.dump_traceback_later(900,repeat=True,file=sys.stderr)
-    stage("main_enter",arm=args.arm_id)
+    if os.environ.get("PKS_DISABLE_MKLDNN","0")=="1":
+        torch.backends.mkldnn.enabled=False
+    if os.environ.get("PKS_TORCH_THREADS")=="1":
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+    stage("main_enter",arm=args.arm_id,
+          mkldnn_enabled=bool(torch.backends.mkldnn.enabled),
+          torch_threads=torch.get_num_threads())
     try:
         execute(args)
     finally:
