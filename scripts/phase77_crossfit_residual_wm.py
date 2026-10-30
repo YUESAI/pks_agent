@@ -15,7 +15,7 @@ predictions from models never trained on those residual subjects.
 No DEV/AUDIT/outer patient is used for residual or WM training.
 """
 from __future__ import annotations
-import argparse,csv,hashlib,json,time
+import argparse,csv,hashlib,json,time,faulthandler,sys,os
 from collections import Counter
 from datetime import datetime,timezone
 from pathlib import Path
@@ -31,6 +31,15 @@ from scripts.phase76_reliability_gated_wm import (
 SEED=20261018
 TASKS=(("prodromal",12),("prodromal",24),("PD",12))
 DEV_GAMMAS=(0.25,0.5,1.0)
+T0=time.monotonic()
+
+def stage(name,**data):
+    """Safe cluster diagnostics: aggregate counts only, never patient data."""
+    msg={"phase":77,"stage":name,
+         "elapsed_seconds":round(time.monotonic()-T0,2),"pid":os.getpid()}
+    msg.update(data)
+    print("PHASE77_STAGE "+json.dumps(msg,sort_keys=True),flush=True)
+
 
 def hash_fold(pid,task):
     s=f"phase77|inner|{SEED}|{task[0]}|{task[1]}|{pid}"
@@ -176,41 +185,60 @@ def execute(args):
         raise ValueError("Unsafe output location")
     out.mkdir(parents=True,exist_ok=False)
     start=time.perf_counter()
+    stage("before_load_cohorts",arm=args.arm_id)
     people,source=load_cohorts(root,args.manifest_db)
+    stage("after_load_cohorts",patients=len(people))
     evidence,qc,_=evidence_tables(root,people)
+    stage("after_evidence_tables",patients=len(evidence))
     results=[];paired=[];audit_log=[];coverage=[]
     for task in TASKS:
+        stage("task_start",cohort=task[0],horizon=task[1],variant=variant)
         subset=[p for p in people if p["cohort"]==task[0]]
         target,_=future_site_pairs(subset,task[1])
+        stage("after_target_pairs",count=len(target))
         rows=data_rows(subset,target,evidence,task)
+        stage("after_data_rows",count=len(rows))
         fit,tune,audit,eval_rows=split_data(rows,task,held)
+        stage("after_split",fit=len(fit),tune=len(tune),
+              audit=len(audit),eval=len(eval_rows))
         if min(map(len,(fit,tune,audit,eval_rows)))<10:
             coverage.append({"cohort":task[0],"horizon":task[1],
                              "status":"insufficient_split"})
             continue
         keys=optional_keys(fit)
+        stage("before_motor_fit",epochs=args.epochs,features=len(keys))
         motor=motor_fit(fit,subset,held,task[1],args.epochs)
+        stage("after_motor_fit")
         motor_pred=motor.predict(eval_rows)
+        stage("after_motor_predict")
+        stage("before_hgb_fit")
         predictions={
             "motor_wm":motor_pred,
             "motor_hgb":TimeTabular("hgb").fit(fit,()).predict(eval_rows),
             "multimodal_hgb":TimeTabular("hgb").fit(fit,keys).predict(eval_rows),
         }
+        stage("after_hgb_fit")
         if variant>=1:
+            stage("before_early_fusion_fit")
             early=DirectWM(keys,style="early",epochs=args.epochs,
                            seed=SEED+100*held+task[1]).fit(
                                fit,get_aux(subset,{r["pid"] for r in fit}))
             predictions["early_multimodal"]=early.predict(eval_rows)
+            stage("after_early_fusion_fit")
         residual=None
         if variant>=2:
+            stage("before_crossfit_residual")
             residual=CrossFitClinicalResidual(keys).fit(
                 fit,subset,task,held,args.epochs)
+            stage("after_crossfit_residual",inner_splits=len(residual.splits))
             predictions["bias_only"]=predict_revision(
                 motor_pred,eval_rows,residual,0.)
             predictions["nonmotor_residual"]=predict_revision(
                 motor_pred,eval_rows,residual,1.)
         if variant==3:
+            stage("before_verifier")
             gamma,accepted,decision=select_verified(motor,residual,tune,audit)
+            stage("after_verifier",accepted=bool(accepted))
             # Rollback means exact incumbent Motor, not a silent
             # bias-only update without an independent audit.
             predictions["verified_residual"]=(
@@ -294,6 +322,12 @@ def main():
     p.add_argument("--report-dir",type=Path,required=True)
     p.add_argument("--epochs",type=int,default=18)
     args=p.parse_args()
-    execute(args)
+    faulthandler.enable(file=sys.stderr,all_threads=True)
+    faulthandler.dump_traceback_later(900,repeat=True,file=sys.stderr)
+    stage("main_enter",arm=args.arm_id)
+    try:
+        execute(args)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
 if __name__=="__main__":
     main()
