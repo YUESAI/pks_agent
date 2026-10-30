@@ -18,7 +18,7 @@ No PHI or individual predictions exported.
 """
 from __future__ import annotations
 
-import argparse,csv,hashlib,json,math,time
+import argparse,csv,hashlib,json,math,time,os
 from collections import Counter
 from datetime import datetime,timezone
 from pathlib import Path
@@ -191,7 +191,13 @@ class DirectWM:
         if style not in ("balanced","early","gated","gated_mae"):
             raise ValueError("Unallowlisted WM revision")
     def fit(self,fit,aux):
-        torch.set_num_threads(4)
+        # Previous published exploratory phases used 4 threads. Allow new
+        # constrained CPU jobs to opt into a single-thread backend when
+        # the GRUCell native backward path exhibits pathological stalls.
+        threads=int(os.environ.get("PKS_TORCH_THREADS","4"))
+        if not 1<=threads<=8:
+            raise ValueError("PKS_TORCH_THREADS must be 1..8")
+        torch.set_num_threads(threads)
         torch.manual_seed(self.seed)
         gen=np.random.default_rng(self.seed)
         self.net=CTDirect(len(self.keys),gated=self.style.startswith("gated"))
@@ -207,7 +213,16 @@ class DirectWM:
         else:ax=None;target=None
         weights=((.50,.35,.15) if self.style in ("balanced","early","gated") else
                  (.90,.05,.05))
+        verbose=os.environ.get("PKS_TRAIN_PROGRESS")=="1"
+        start_fit=time.monotonic()
+        if verbose:
+            print("WM_FIT_START "+json.dumps({
+                "style":self.style,"epochs":self.epochs,
+                "fit_people":len(fit),"aux_pairs":len(aux),
+                "torch_threads":torch.get_num_threads(),
+                "mkldnn":torch.backends.mkldnn.enabled}),flush=True)
         for epoch in range(self.epochs):
+            epoch_start=time.monotonic()
             order=gen.permutation(len(fit))
             self.net.train()
             for start in range(0,len(fit),32):
@@ -244,6 +259,12 @@ class DirectWM:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.net.parameters(),1.)
                 opt.step()
+            if verbose:
+                print("WM_EPOCH_DONE "+json.dumps({
+                    "style":self.style,"epoch":epoch+1,
+                    "epoch_seconds":round(time.monotonic()-epoch_start,3),
+                    "total_seconds":round(time.monotonic()-start_fit,3)}),
+                    flush=True)
         self.net.eval()
         return self
     def gate_summary(self):
