@@ -66,8 +66,18 @@ def engineered(rows,keys):
                       for v in hist if item in v["scores"]]
             first_val=observed[0][1] if observed else 0.
             last_val=observed[-1][1] if observed else 0.
-            change=(last_val-first_val)/4. if len(observed)>1 else 0.
-            slope=(last_val-first_val)/max(1.,observed[-1][0]-observed[0][0])
+            # PPMI longitudinal visits are sparsely and irregularly
+            # measured per item. A feature can have zero or just one
+            # measured value even when the *visit* itself is valid.
+            # Do not index an empty observation series; singleton
+            # measurements also have no estimable temporal slope.
+            if len(observed)>=2:
+                change=(last_val-first_val)/4.
+                slope=(last_val-first_val)/max(
+                    1.,observed[-1][0]-observed[0][0])
+            else:
+                change=0.
+                slope=0.
             out.extend([first_val/4.,last_val/4.,change,
                         slope*6./4.,len(observed)/6.,float(bool(observed))])
         out.extend([len(hist)/6.,(last["month"]-first["month"])/36.,
