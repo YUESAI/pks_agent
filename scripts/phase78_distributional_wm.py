@@ -152,6 +152,11 @@ class DecisionModel:
         return self.wm.predict(rows,self.decision)
 
 def execute(a):
+    # Phase77 proved the default threaded GRU CPU backward can stall
+    # for 12 hours on this HPC. Force the known-fast compute path here.
+    torch.backends.mkldnn.enabled=False
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
     held,arm=divmod(a.arm_id,4)
     out=a.report_dir.resolve()
     root=a.data_root.resolve()
