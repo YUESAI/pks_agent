@@ -162,7 +162,11 @@ def qwen_choice(row,prior,channel,values,doctor,horizon):
     motor risk and ABSTAIN. Actual patient test values remain hidden."""
     allowed=channel.allowed(row)
     if not allowed:return None,False
-    gains={k:round(float(values.get(k,(-1.,1.))[0]),6) for k in allowed}
+    # JSON must remain finite and standards-compliant. When no OOF
+    # support exists, tell Qwen "unknown" rather than emitting -Infinity.
+    gains={k:(round(float(values[k][0]),6)
+              if k in values and np.isfinite(values[k][0]) else None)
+           for k in allowed}
     messages=[{"role":"system","content":
         "Research-only test acquisition. You may choose one already "
         "measured baseline test name from the allowed list OR ABSTAIN "
