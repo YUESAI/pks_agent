@@ -71,7 +71,6 @@ class DistributionWM:
         for epoch in range(self.epochs):
             self.net.train()
             for start in range(0,len(fit),32):
-                ix=generator.permutation(len(fit))[0:0] if False else None
                 # Deterministic seeded shuffle once for each epoch.
                 if start==0:order=generator.permutation(len(fit))
                 ix=order[start:start+32]
