@@ -143,6 +143,7 @@ class OOFConditionalValue:
             self.splits.append([len(train_idx),len(valid_idx)])
         if not np.isfinite(motor_oof).all():
             raise AssertionError("OOF Motor predictions incomplete")
+        self.fit_priors=motor_oof.copy()
         # Second cross-fitting layer for the conditional test channel:
         # participant y is excluded both from the Motor WM used for
         # their OOF p0 and from their conditional emission.
