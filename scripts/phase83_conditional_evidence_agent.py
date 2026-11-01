@@ -270,6 +270,19 @@ def verify(o_dev,q_dev,o_audit,q_audit,dev,audit,
         "audit_mae_before":oa["mae_median"],
         "audit_mae_candidate":qa["mae_median"]}
 
+def combine_qwen_stats(*parts):
+    """Merge Counter-like Qwen statistics even when no calls were made.
+
+    A Qwen policy can have zero supported tests for a task, so the
+    Counter has no `qwen_calls` key. Converting to dict first and then
+    incrementing an absent key caused all five Qwen jobs to crash.
+    """
+    wanted=("qwen_calls","released","hard_abstain",
+            "llm_abstain","invalid")
+    return {key:sum(int(part.get(key,0)) for part in parts)
+            for key in wanted}
+
+
 def run(a):
     if not 0<=a.arm_id<20 or not 4<=a.epochs<=80:
         raise ValueError("Bad arm or epoch")
@@ -353,8 +366,9 @@ def run(a):
                 q_p if accepted else outcomes["conditional_oof"])
             counts["verified_policy"]=(
                 qs["released"] if accepted else vs["released"])
-            controls["qwen"]=dict(qs)
-            controls["qwen"]["qwen_calls"]+=qds["qwen_calls"]+qas["qwen_calls"]
+            # Some folds have zero eligible Qwen questions; Counter()
+            # omits those keys. Aggregate explicitly with zero defaults.
+            controls["qwen"]=combine_qwen_stats(qs,qds,qas)
             audit_log.append({"cohort":task[0],"horizon":task[1],
                               "fold":fold,**decision})
         primary={0:"motor_q0",1:"conditional_fixed",
@@ -409,7 +423,7 @@ def run(a):
           "Exploratory re-used frozen Prodromal TRAIN and strict PD",
           "Previously consumed final TEST untouched",
           "True pre-cutoff Motor and BL optional evidence only",
-          "Double crossfit prevents evaluated FIT patient outcome fitting emission",
+          "FIT-only OOF priors; internal emission estimates may retain indirect crossfit dependencies (see Phase83 audit)",
           "Risk-band grouping is a coarse approximation to full conditional dependency",
           "One clinical test, value released only after selecting its name",
           "DEV/AUDIT gate is checkpoint-policy proxy, not autonomous RSI",
