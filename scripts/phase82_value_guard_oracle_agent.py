@@ -4,8 +4,9 @@
 Five frozen subject folds x four standalone CPU strategies:
 0 q0 / FIT-priority fixed / WM information gain / deterministic random
 1 add FIT-only 3fold OOF benefits and prespecified query-cost frontiers
-2 add hard OOF-value-filtered REAL Qwen Doctor (may ABSTAIN)
-3 add one DEV/AUDIT-gated selection between safe Qwen and OOF policy
+2 focus on stricter OOF benefit-cost threshold and oracle headroom
+3 add hard OOF-value-filtered REAL Qwen Doctor (may ABSTAIN) and a
+  once-only DEV/AUDIT-gated choice between safe Qwen and OOF policy
 
 For each outer evaluation fold also estimate an *unattainable* retrospective
 best single-test RPS using that subject's true outcome. It is explicitly
@@ -225,7 +226,7 @@ def job(args):
     people,_=load_cohorts(root,args.manifest_db)
     evidence,quality,_=evidence_tables(root,people)
     doctor=None
-    if variant>=2:
+    if variant==3:
         if args.model_dir is None:
             raise ValueError("Qwen arms require --model-dir")
         doctor=TransformersDoctor(args.model_dir,max_new_tokens=32,
@@ -266,7 +267,7 @@ def job(args):
                     held,eval_prior,channel,value,cost)
                 stats[method]=s
                 query_rate[method]=s["released"]
-        if variant>=2:
+        if variant==3:
             policies["qwen_safe"],s=safe_qwen(
                 held,eval_prior,channel,value,doctor,task[1],MAIN_COST)
             stats["qwen_safe"]=s
@@ -293,8 +294,8 @@ def job(args):
             stats["qwen_safe"]["qwen_calls"]+=qs["qwen_calls"]+qas["qwen_calls"]
             stats["qwen_safe"]["invalid_action"]+=(
                 qs["invalid_action"]+qas["invalid_action"])
-        primary={0:"motor_q0",1:"oof_cost250",
-                 2:"qwen_safe",3:"verified_policy"}[variant]
+        primary={0:"motor_q0",1:"oof_cost100",
+                 2:"oof_cost500",3:"verified_policy"}[variant]
         for name,pred in policies.items():
             s=probabilities_scores(pred,held)
             cost=MAIN_COST*query_rate[name]/len(held)
