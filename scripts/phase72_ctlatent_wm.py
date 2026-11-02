@@ -93,7 +93,8 @@ def build_auxiliary(people):
     heldout individuals.
     """
     rows=[]
-    for p in people:
+    # A seeded minibatch over unsorted auxiliary rows is NOT reproducible.
+    for p in sorted(people,key=lambda r:str(r["pid"])):
         visits=p["visits"]
         for j in range(len(visits)-1):
             first,second=visits[j],visits[j+1]
