@@ -90,7 +90,8 @@ def data_rows(people,truth,raw_evidence,task):
 
 
 def split_data(rows,task,held):
-    outer=[r for r in rows if patient_fold(r["pid"],task)==held]
+    outer=sorted((r for r in rows if patient_fold(r["pid"],task)==held),
+                 key=lambda r:stable(r["pid"],"outer"))
     pool=sorted((r for r in rows if patient_fold(r["pid"],task)!=held),
                 key=lambda r:stable(r["pid"],"inner"))
     keep=max(20,int(len(pool)*.30))
