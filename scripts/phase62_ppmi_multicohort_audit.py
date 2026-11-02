@@ -49,7 +49,7 @@ def clinical_registry(root,manifest):
     frozen=train_anchors(manifest)
     registry={}
     breakdown=Counter()
-    for pid in cohorts.keys()|diagnoses.keys():
+    for pid in sorted(cohorts.keys()|diagnoses.keys()):
         codes=cohorts.get(pid,set());diag=diagnoses.get(pid,set())
         if len(codes)!=1 or len(diag)!=1 or None in diag:
             breakdown["ambiguous_cohort_or_baseline_diagnosis"]+=1
@@ -140,7 +140,7 @@ def load_cohorts(root,manifest):
         buckets[(pid,month,state)].append(v)
 
     entries=defaultdict(lambda:defaultdict(dict))
-    for (pid,month,state),variants in buckets.items():
+    for (pid,month,state),variants in sorted(buckets.items()):
         fingerprints={(v["event"],v["score"],v["status"],
                        v["documented_total"]) for v in variants}
         if len(fingerprints)>1:
@@ -149,7 +149,7 @@ def load_cohorts(root,manifest):
         if len(variants)>1:quality["identical_duplicate_collapsed"]+=1
         entries[pid][state][month]=variants[0]
     patients=[]
-    for pid,(group,anchor) in registry.items():
+    for pid,(group,anchor) in sorted(registry.items()):
         state_map=entries.get(pid,{})
         choice=next((state for state in STATES
                      if anchor in state_map.get(state,{}) and
@@ -170,6 +170,8 @@ def load_cohorts(root,manifest):
             "selected_motor_patients":len(patients),
             "selected_cohort_counts":dict(Counter(p["cohort"] for p in patients)),
             "source_motor_table":source.name}
+    # Stable cohort order across different PYTHONHASHSEED values.
+    patients.sort(key=lambda p:p["pid"])
     return patients,report
 
 
