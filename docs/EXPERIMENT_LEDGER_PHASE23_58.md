@@ -1,3 +1,12 @@
+> **Newer experiments:** This historical ledger intentionally ends
+> at Phase58. Phase59 Qwen CPU pilot was recorded in
+> [PHASE61_CPU_PAIRED_VERIFIER.md](PHASE61_CPU_PAIRED_VERIFIER.md).
+> **Phase60–90 are now indexed** in
+> [EXPERIMENT_LEDGER_PHASE60_90.md](EXPERIMENT_LEDGER_PHASE60_90.md)
+> and the [machine-readable registry](experiment_registry_phase60_90.json).
+> These documents are on the `feat/phase62-ppmi-cohort-expansion` branch,
+> not the outdated GitHub default `main`.
+
 # VERA-PD cumulative experiment ledger — Phase23–58
 
 Last updated: **2026-10-22**. This file indexes findings already
