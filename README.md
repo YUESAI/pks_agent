@@ -1,5 +1,29 @@
 # pks_agent
 
+## Current experiments and no-repeat checklist
+
+**Experiment history is NOT limited to Phase59.** On the working
+branch `feat/phase62-ppmi-cohort-expansion`, use the unified
+[Phase60–90 research ledger](docs/EXPERIMENT_LEDGER_PHASE60_90.md),
+[Phase60–90 searchable registry](docs/experiment_registry_phase60_90.json)
+and [Phase90 actual result report](docs/PHASE90_ACTUAL_RESULTS_AND_DECISION.md).
+Historical Phases23–58: [earlier ledger](docs/EXPERIMENT_LEDGER_PHASE23_58.md);
+Phase59 (Qwen four-arm pilot) is recorded in
+[Phase61 report](docs/PHASE61_CPU_PAIRED_VERIFIER.md).
+
+Before starting a new Slurm phase, check previous mechanism/split:
+```bash
+python scripts/experiment_preflight.py --query "Qwen abstain"
+python scripts/experiment_preflight.py --mechanism partial33-likelihood --split global80-20-dev --fail-on-match
+```
+
+The default GitHub branch `main` is much older than this research
+branch. Select `feat/phase62-ppmi-cohort-expansion` in GitHub to see
+all experimental files and the latest results. Experiments on the
+reused 80/20 development split are exploratory; they are not an
+independent TEST cohort and never justify clinical claims alone.
+
+---
 Parkinson's disease multi-agent / RSI + world model research.
 
 ## Step 1 — Read-only dataset audit
