@@ -15,7 +15,7 @@ import argparse,json,re,sys
 from pathlib import Path
 
 DEFAULT=(Path(__file__).resolve().parents[1]/
-         "docs"/"experiment_registry_phase60_90.json")
+         "docs"/"experiment_registry.json")
 
 
 def load_registry(path):
