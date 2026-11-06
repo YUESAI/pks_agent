@@ -4,9 +4,9 @@
 
 **Experiment history is NOT limited to Phase59.** On the working
 branch `feat/phase62-ppmi-cohort-expansion`, use the unified
-[Phase60–90 research ledger](docs/EXPERIMENT_LEDGER_PHASE60_90.md),
-[Phase60–90 searchable registry](docs/experiment_registry_phase60_90.json)
-and [Phase90 actual result report](docs/PHASE90_ACTUAL_RESULTS_AND_DECISION.md).
+[current research ledger](docs/EXPERIMENT_LEDGER_CURRENT.md),
+[canonical searchable registry](docs/experiment_registry.json)
+and [Phase90 actual result report](docs/PHASE90_ACTUAL_RESULTS_AND_DECISION.md) and [Phase91 planned protocol](docs/PHASE91_PRE_REGISTERED_PROTOCOL.md).
 Historical Phases23–58: [earlier ledger](docs/EXPERIMENT_LEDGER_PHASE23_58.md);
 Phase59 (Qwen four-arm pilot) is recorded in
 [Phase61 report](docs/PHASE61_CPU_PAIRED_VERIFIER.md).
