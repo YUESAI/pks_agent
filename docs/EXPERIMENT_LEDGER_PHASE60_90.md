@@ -1,3 +1,9 @@
+> **This is a historical snapshot, ending at Phase90.**
+> New results and planned experiments are in the
+> [living Phase60+ ledger](EXPERIMENT_LEDGER_CURRENT.md) and
+> [canonical machine registry](experiment_registry.json).
+> Phase91 is pre-registered there as NOT YET RUN.
+
 # Unified experiment ledger — Phase60–90
 
 **Updated:** 2026-11-05. **Branch:** `feat/phase62-ppmi-cohort-expansion`. This is the **single starting index** for all post-Phase59 research on this working branch.
