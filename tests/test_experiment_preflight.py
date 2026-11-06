@@ -9,10 +9,14 @@ class RegistryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data=load_registry(
-            "docs/experiment_registry_phase60_90.json")
+            "docs/experiment_registry.json")
     def test_all_phase60_to90_exist_once(self):
         self.assertEqual([r["phase"] for r in self.data["records"]],
-                         list(range(60,91)))
+                         list(range(60,92)))
+    def test_phase91_planned_but_not_yet_run(self):
+        found=matching_records(self.data,phase=91)
+        self.assertEqual(len(found),1)
+        self.assertEqual(found[0]["status"],"PLANNED_NOT_RUN")
     def test_phase90_does_not_collide_with_p89(self):
         found=matching_records(self.data,phase=90)
         self.assertEqual(len(found),1)
